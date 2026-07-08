@@ -1,0 +1,210 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  TEACHER
+  STUDENT
+  ADMIN
+}
+
+model User {
+  id       String    @id @default(cuid())
+  email    String    @unique
+  password String
+  name     String
+  gender   Int       @default(0)
+  avatar   String?
+  role     Role      @default(STUDENT)
+  active   Boolean   @default(true)
+  login    DateTime?
+  created  DateTime  @default(now())
+  updated  DateTime  @updatedAt
+  deleted  DateTime?
+
+  classrooms    Classroom[]
+  banks         Bank[]
+  plans         Plan[]
+  notifications Notification[]
+  members       Member[]
+  submissions   Submission[]
+
+  @@map("users")
+}
+
+model Classroom {
+  id          String    @id @default(cuid())
+  name        String
+  code        String    @unique
+  description String?
+  teacher     String
+  fee         Float     @default(0)
+  grade       Int       @default(1)
+  capacity    Int       @default(50)
+  active      Boolean   @default(true)
+  created     DateTime  @default(now())
+  updated     DateTime  @updatedAt
+  deleted     DateTime?
+  rating      Float     @default(0)
+
+  teacherRef User     @relation(fields: [teacher], references: [id], onDelete: Cascade)
+  members    Member[]
+  exams      Exam[]
+
+  @@map("classrooms")
+}
+
+model Member {
+  id        String   @id @default(cuid())
+  classroom String
+  student   String
+  role      String   @default("STUDENT")
+  joined    DateTime @default(now())
+
+  classroomRef Classroom @relation(fields: [classroom], references: [id], onDelete: Cascade)
+  studentRef   User      @relation(fields: [student], references: [id], onDelete: Cascade)
+
+  @@unique([classroom, student])
+  @@map("members")
+}
+
+model Bank {
+  id          String    @id @default(cuid())
+  name        String
+  subject     String
+  description String?
+  teacher     String
+  public      Boolean   @default(false)
+  created     DateTime  @default(now())
+  updated     DateTime  @updatedAt
+  deleted     DateTime?
+
+  teacherRef User       @relation(fields: [teacher], references: [id], onDelete: Cascade)
+  questions  Question[]
+
+  @@map("banks")
+}
+
+model Question {
+  id         String    @id @default(cuid())
+  bank       String
+  content    String
+  type       String    @default("MCQ")
+  difficulty String    @default("MEDIUM")
+  topic      String?
+  options    Json?
+  solution   Json?
+  points     Float     @default(1.0)
+  active     Boolean   @default(true)
+  created    DateTime  @default(now())
+  updated    DateTime  @updatedAt
+  deleted    DateTime?
+
+  bankRef Bank @relation(fields: [bank], references: [id], onDelete: Cascade)
+
+  @@map("questions")
+}
+
+model Exam {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  duration    Int
+  threshold   Float     @default(5.0)
+  teacher     String
+  classroom   String?
+  questions   Json      @default("[]")
+  config      Json      @default("{}")
+  status      String    @default("DRAFT")
+  start       DateTime?
+  end         DateTime?
+  created     DateTime  @default(now())
+  updated     DateTime  @updatedAt
+  deleted     DateTime?
+
+  classroomRef Classroom?   @relation(fields: [classroom], references: [id], onDelete: SetNull)
+  submissions  Submission[]
+
+  @@map("exams")
+}
+
+model Submission {
+  id        String    @id @default(cuid())
+  exam      String
+  student   String
+  start     DateTime  @default(now())
+  submitted DateTime?
+  elapsed   Int       @default(0)
+  cheats    Int       @default(0)
+  logs      Json?     @default("[]")
+  answers   Json?     @default("[]")
+  status    String    @default("IN_PROGRESS")
+  created   DateTime  @default(now())
+  updated   DateTime  @updatedAt
+
+  examRef    Exam   @relation(fields: [exam], references: [id], onDelete: Cascade)
+  studentRef User   @relation(fields: [student], references: [id], onDelete: Cascade)
+  scoreRef   Score?
+
+  @@unique([exam, student])
+  @@map("submissions")
+}
+
+model Score {
+  id         String   @id @default(cuid())
+  student    String
+  exam       String
+  classroom  String?
+  submission String   @unique
+  total      Float    @default(0)
+  max        Float    @default(10.0)
+  passed     Boolean  @default(false)
+  feedback   String?
+  graded     DateTime @default(now())
+  created    DateTime @default(now())
+  updated    DateTime @updatedAt
+
+  submissionRef Submission @relation(fields: [submission], references: [id], onDelete: Cascade)
+
+  @@map("scores")
+}
+
+model Plan {
+  id        String    @id @default(cuid())
+  user      String
+  title     String
+  subject   String?
+  content   Json
+  status    String    @default("ACTIVE")
+  completed DateTime?
+  created   DateTime  @default(now())
+  updated   DateTime  @updatedAt
+
+  userRef User @relation(fields: [user], references: [id], onDelete: Cascade)
+
+  @@map("plans")
+}
+
+model Notification {
+  id      String   @id @default(cuid())
+  user    String
+  title   String
+  message String?
+  type    String   @default("SYSTEM")
+  read    Boolean  @default(false)
+  opened  DateTime?
+  created DateTime @default(now())
+
+  userRef User @relation(fields: [user], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
