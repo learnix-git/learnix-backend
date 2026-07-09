@@ -18,8 +18,7 @@ const google = new OAuth2Client(
   process.env.GOOGLE_CLIENT_SECRET
 );
 
-export class AuthService {
-    
+export class AuthService {  
   // Logic ĐĂNG KÝ
   static async register(data: { email: string; password: string; name: string; role?: any; gender: number }) {
     // Kiểm tra email có bị trùng không
@@ -141,6 +140,6 @@ export class AuthService {
   
   if (!user) 
     throw new Error("User không tồn tại!");
-  return user;
-}
+    return user;
+  }
 }
