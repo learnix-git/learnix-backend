@@ -5,12 +5,13 @@ export const ClassroomController = {
   /**
    * GET /api/v1/classrooms
    */
-  async get_classroom(req: Request, res: Response) {
+  async get_all_classroom(req: Request, res: Response) {
     try {
-      const any = req as any;
-      const id = any.user?.role === "TEACHER" ? any.user.id : undefined;
+      // Lấy user từ local
+      const user = res.locals.user;
 
-      const data = await ClassroomService.get_classroom(id);
+      // Gọi service
+      const data = await ClassroomService.get_all_classroom();
 
       return res.status(200).json({
         status: "SUCCESS",
@@ -31,12 +32,15 @@ export const ClassroomController = {
    */
   async create_classroom(req: Request, res: Response) {
     try {
-      const any = req as any;
-      if (any.user?.role !== "TEACHER") {
+      // Lấy user từ local
+      const user = res.locals.user;
+
+      // Kiểm tra xem có phải giáo viên không 
+      if (user.role !== "TEACHER") {
         return res.status(403).json({ status: "ERROR" });
       }
 
-      const id = any.user.id;
+      const id = user.id;
       const { name, code, description, fee, grade, capacity } = req.body;
 
       if (!name || !code) {
@@ -53,6 +57,14 @@ export const ClassroomController = {
       });
     } catch (error: any) {
       console.error("Error:", error);
+
+      if (error.code === 'P2002') {
+        return res.status(400).json({ 
+          status: "ERROR", 
+          message: "Mã lớp học này đã tồn tại!" 
+        });
+      }
+
       return res.status(500).json({ 
         status: "ERROR", 
         message: "Lỗi server!",

@@ -10,18 +10,18 @@ const adapter = new PrismaPg({
 const prisma = new PrismaClient({ adapter });
 
 export const ClassroomService = {
-  async get_classroom(id?: string) {
-    const condition = id 
-      ? { teacher: id } 
-      : { active: true };
-    
+  async get_all_classroom() {
     const classes = await prisma.classroom.findMany({
-      where: condition,
       orderBy: { created: "desc" },
       include: {
         _count: {
           select: { members: true }, 
         },
+        teacherRef: { 
+          select: {
+            name: true,
+          }
+        }
       },
     });
 
@@ -29,6 +29,7 @@ export const ClassroomService = {
       ...c,
       count: c._count.members,
       price: c.fee > 0 ? `${c.fee.toLocaleString("vi-VN")} đ` : "Miễn phí",
+      name: c.teacherRef?.name || "Giảng viên Learnix",
     }));
   },
   
