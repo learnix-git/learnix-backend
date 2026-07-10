@@ -69,14 +69,14 @@ export const ClassroomController = {
       }
 
       const id = user.id;
-      const { name, code, description, fee, grade, capacity } = req.body;
+      const { name, description, fee, grade, capacity } = req.body;
 
-      if (!name || !code) {
+      if (!name) {
         return res.status(400).json({ status: "ERROR" });
       }
 
       const new_class = await ClassroomService.HandleCreate(id, {
-        name, code, description, fee, grade, capacity
+        name, description, fee, grade, capacity
       });
 
       return res.status(201).json({

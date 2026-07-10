@@ -96,7 +96,7 @@ export const ClassroomService = {
   },
 
   async HandleCreate(id: string, data: { 
-    name: string; code: string; description?: string; 
+    name: string; description?: string; 
     fee: number; grade: number; capacity?: number 
   }) {
     try {
