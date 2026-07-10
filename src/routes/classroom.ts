@@ -5,12 +5,13 @@ import { compel } from "../middlewares/auth";
 const router = Router();
 
 // GET
-router.get("/", compel, ClassroomController.get_all_classroom);
+router.get("/", compel, ClassroomController.HandleGetAll);
+router.get("/:id", compel, ClassroomController.HandleGetById);
 
 // POST
-router.post("/", compel, ClassroomController.create_classroom);
+router.post("/", compel, ClassroomController.HandleCreate);
 
-// PUT
+// PUT  
 
 // DEL
 

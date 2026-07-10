@@ -5,13 +5,10 @@ export const ClassroomController = {
   /**
    * GET /api/v1/classrooms
    */
-  async get_all_classroom(req: Request, res: Response) {
+  async HandleGetAll(req: Request, res: Response) {
     try {
-      // Lấy user từ local
-      const user = res.locals.user;
-
       // Gọi service
-      const data = await ClassroomService.get_all_classroom();
+      const data = await ClassroomService.HandleGetAll();
 
       return res.status(200).json({
         status: "SUCCESS",
@@ -26,11 +23,42 @@ export const ClassroomController = {
       });
     }
   },
+
+  /**
+   * GET /api/v1/classrooms/:id
+   */
+  async HandleGetById(req: Request, res: Response) {
+    const id = req.params.id as string;
+
+    try {
+      const data = await ClassroomService.HandleGetById(id);
+
+      if (!data) {
+        return res.status(404).json({
+          status: "ERROR",
+          message: "Lớp học không tồn tại hoặc đã bị xóa!"
+        });
+      }
+
+      return res.status(200).json({
+        status: "SUCCESS",
+        data: data
+      });
+
+    } catch (error: any) {
+      console.error("Error:", error);
+      return res.status(500).json({
+        status: "ERROR",
+        message: error.message || "Lỗi server!",
+        errors: error.errors || null,
+      });
+    }
+  },
   
   /**
    * POST /api/v1/classrooms
    */
-  async create_classroom(req: Request, res: Response) {
+  async HandleCreate(req: Request, res: Response) {
     try {
       // Lấy user từ local
       const user = res.locals.user;
@@ -47,7 +75,7 @@ export const ClassroomController = {
         return res.status(400).json({ status: "ERROR" });
       }
 
-      const new_class = await ClassroomService.create_classroom(id, {
+      const new_class = await ClassroomService.HandleCreate(id, {
         name, code, description, fee, grade, capacity
       });
 

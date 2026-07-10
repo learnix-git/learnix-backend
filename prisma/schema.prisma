@@ -17,6 +17,29 @@ enum Role {
   ADMIN
 }
 
+enum Status {
+  PENDING   // Đang chờ thanh toán
+  COMPLETED // Thanh toán thành công
+  FAILED    // Giao dịch thất bại
+  CANCELLED // Người dùng hủy đơn
+}
+
+model Order {
+  id          String      @id @default(cuid())
+  userId      String
+  classId     String
+  amount      Int         
+  status      Status      @default(PENDING)
+  gateway     String      @default("VNPAY")
+  created     DateTime    @default(now())
+  updated     DateTime    @updatedAt
+
+  userRef     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  classRef    Classroom   @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@map("orders")
+}
+
 model User {
   id       String    @id @default(cuid())
   email    String    @unique
@@ -35,8 +58,9 @@ model User {
   banks         Bank[]
   plans         Plan[]
   notifications Notification[]
-  members       Member[]
+  members       Member[]        @relation("studentRef")
   submissions   Submission[]
+  orders        Order[]
 
   @@map("users")
 }
@@ -47,18 +71,21 @@ model Classroom {
   code        String    @unique
   description String?
   teacher     String
+  feed        String
   fee         Float     @default(0)
   grade       Int       @default(1)
   capacity    Int       @default(50)
   active      Boolean   @default(true)
+  status      Boolean   @default(false)
   created     DateTime  @default(now())
   updated     DateTime  @updatedAt
   deleted     DateTime?
   rating      Float     @default(0)
 
   teacherRef User     @relation(fields: [teacher], references: [id], onDelete: Cascade)
-  members    Member[]
+  members    Member[] @relation("classroomRef")
   exams      Exam[]
+  orders        Order[]
 
   @@map("classrooms")
 }
@@ -70,8 +97,8 @@ model Member {
   role      String   @default("STUDENT")
   joined    DateTime @default(now())
 
-  classroomRef Classroom @relation(fields: [classroom], references: [id], onDelete: Cascade)
-  studentRef   User      @relation(fields: [student], references: [id], onDelete: Cascade)
+  classroomRef Classroom @relation("classroomRef", fields: [classroom], references: [id], onDelete: Cascade)
+  studentRef   User      @relation("studentRef", fields: [student], references: [id], onDelete: Cascade)
 
   @@unique([classroom, student])
   @@map("members")
