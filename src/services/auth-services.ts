@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
+
 import { hash, compare } from '../utils/bcrypt';
 import { generate } from '../utils/jwt';
 import { OAuth2Client } from 'google-auth-library';
@@ -129,17 +130,17 @@ export class AuthService {
 
   // Logic lấy thông tin
   static async get_info(userId: string) {
-
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { 
-      id: true, email: true, name: true, role: true, 
-      gender: true, avatar: true, active: true 
-    },
-  });
-  
-  if (!user) 
-    throw new Error("User không tồn tại!");
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { 
+        id: true, email: true, name: true, role: true, 
+        gender: true, avatar: true, active: true 
+      },
+    });
+    
+    if (!user) {  
+        throw new Error("User không tồn tại!");
+    }
     return user;
   }
 }

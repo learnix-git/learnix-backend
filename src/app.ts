@@ -3,8 +3,8 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import AuthRoute from './routes/auth';
-import ClassroomRoute from './routes/classroom'
+import AuthRoute from './routes/auth-routes';
+import ClassroomRoute from './routes/classroom-routes'
 
 dotenv.config();
 

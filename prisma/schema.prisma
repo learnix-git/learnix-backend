@@ -71,7 +71,7 @@ model Classroom {
   code        String    @unique
   description String?
   teacher     String
-  feed        String
+  feed        Json      @default("[]")
   fee         Float     @default(0)
   grade       Int       @default(1)
   capacity    Int       @default(50)
@@ -81,6 +81,7 @@ model Classroom {
   updated     DateTime  @updatedAt
   deleted     DateTime?
   rating      Float     @default(0)
+  address     String?
 
   teacherRef User     @relation(fields: [teacher], references: [id], onDelete: Cascade)
   members    Member[] @relation("classroomRef")
