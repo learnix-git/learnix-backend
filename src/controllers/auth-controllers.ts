@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { AuthService } from '../services/auth-services';
 import { registerSchema, loginSchema } from '../validations/auth-validations';
+import { success } from 'zod';
 
 export class AuthController {
   static async register(req: Request, res: Response) {
@@ -9,12 +10,12 @@ export class AuthController {
       const result = await AuthService.register(validated);
 
       res.status(201).json({
-        status: "SUCCESS",
+        success: true,
         data: result,
       });
     } catch (error: any) {
       res.status(400).json({
-        status: "ERROR",
+        success: false,
         message: error.message || "Đã có lỗi xảy ra khi đăng ký!",
         errors: error.errors || null,
       });
@@ -27,12 +28,12 @@ export class AuthController {
       const result = await AuthService.login(data);
 
       res.status(200).json({
-        status: "SUCCESS",
+        success: true,
         data: result,
       });
     } catch (error: any) {
       res.status(400).json({
-        status: "ERROR",
+        success: false,
         message: error.message || "Đăng nhập thất bại!",
         errors: error.errors || null,
       });
@@ -44,19 +45,57 @@ export class AuthController {
       const { code, uri } = req.body;
       
       if (!code || !uri) {
-        return res.status(400).json({ status: "ERROR", message: "Thiếu dữ liệu Google Auth!" });
+        return res.status(400).json({ success: false, message: "Thiếu dữ liệu Google Auth!" });
       }
 
       const result = await AuthService.google_login({ code, uri });
 
       res.status(200).json({
-        status: "SUCCESS",
+        success: true,
         data: result,
       });
     } catch (error: any) {
       res.status(400).json({
-        status: "ERROR",
+        success: false,
         message: error.message || "Đăng nhập bằng Google thất bại!",
+      });
+    }
+  }
+
+  static async forgot_password(req: Request, res: Response) {
+    try {
+      const { email } = req.body;
+      
+      await AuthService.forgot_password(email);
+
+      return res.status(200).json({
+        success: true,
+        message: "Đã gửi hướng dẫn khôi phục mật khẩu vào email của bạn.",
+      });
+    } catch (error: any) {
+      const message = error.message || "Không thể gửi email khôi phục. Vui lòng thử lại sau!";
+      return res.status(400).json({
+        success: false,
+        message: message,
+      });
+    }
+  }
+
+  static async reset_password(req: Request, res: Response) {
+    try {
+      const { token, password } = req.body;
+
+      await AuthService.reset_password(token, password);
+
+      return res.status(200).json({
+        success: true,
+        message: "Đặt lại mật khẩu thành công! Bạn có thể đăng nhập bằng mật khẩu mới.",
+      });
+    } catch (error: any) {
+      const message = error.message || "Đặt lại mật khẩu thất bại. Vui lòng thử lại!";
+      return res.status(400).json({
+        success: false,
+        message: message,
       });
     }
   }
@@ -66,9 +105,9 @@ export class AuthController {
       const id = res.locals.user.id; 
       
       const user = await AuthService.get_info(id);
-      res.status(200).json({ status: "SUCCESS", data: user });
+      res.status(200).json({ success: true, data: user });
     } catch (error: any) {
-      res.status(500).json({ status: "ERROR", message: error.message });
+      res.status(500).json({ success: false, message: error.message });
     }
   }
 }
