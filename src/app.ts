@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import AuthRoute from './routes/auth-routes';
-import ClassroomRoute from './routes/classroom-routes'
+import CoursesRoute from './routes/courses-routes'
 
 dotenv.config();
 
@@ -33,7 +33,7 @@ app.use(cors({
 app.use(express.json());
 
 app.use('/api/v1/auth', AuthRoute);
-app.use('/api/v1/classrooms', ClassroomRoute);
+app.use('/api/v1/courses', CoursesRoute);
 
 app.get('/api/v1/health', (req: Request, res: Response) => {
   res.status(200).json({ status: 'SUCCESS', message: 'Backend đang chạy ... !' });

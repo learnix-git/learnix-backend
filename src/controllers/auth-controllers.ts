@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
 import { AuthService } from '../services/auth-services';
 import { registerSchema, loginSchema } from '../validations/auth-validations';
-import { success } from 'zod';
 
 export class AuthController {
   static async register(req: Request, res: Response) {
@@ -74,9 +73,14 @@ export class AuthController {
       });
     } catch (error: any) {
       const message = error.message || "Không thể gửi email khôi phục. Vui lòng thử lại sau!";
+      const provider = error.provider || null;
+      
       return res.status(400).json({
         success: false,
         message: message,
+        data: {
+          provider: provider
+        }
       });
     }
   }

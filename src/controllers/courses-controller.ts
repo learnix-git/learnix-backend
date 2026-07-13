@@ -1,8 +1,8 @@
 import { Request, Response, NextFunction } from "express";
-import { ClassroomService } from "../services/classroom-services";
+import { CoursesService } from "../services/courses-services";
 
-export class ClassroomController {
-  // ! GET /api/v1/classrooms
+export class CoursesController {
+  // ! GET /api/v1/courses
 
   /**
    * @returns
@@ -14,20 +14,22 @@ export class ClassroomController {
    *       name: "...",
    *       code: "...",
    *       description: "...",
+   *       thumbnail: "...",
    *       teacher: "...",
    *       feed: "...",
    *       fee: 500000,
    *       grade: 12,
-   *       capacity: 50,
    *       active: true,
    *       status: false,
-   *       rating: 5.0
+   *       rating: 5.0,
    *       created: "...",
    *       updated: "...",
    *       deleted: null,
    *       teacherRef: {
    *         name: "...",
-   *         avatar: "..."
+   *         avatar: "...",
+   *         bio: "...",
+   *         degree: "..."
    *       }
    *     }
    *   ],
@@ -46,16 +48,16 @@ export class ClassroomController {
       const current = Number(page);
       const skip = Number(limit);
 
-      const result = await ClassroomService.HandleGetAll({ search: String(search || ""), page: current, limit: skip });
+      const result = await CoursesService.HandleGetAll({ search: String(search || ""), page: current, limit: skip });
 
       return res.status(200).json({
         success: true,
-        data: result,
+        data: result.courses,
         pagination: {
-          items: 0,
-          pages: 0,
+          items: result.items,
+          pages: result.pages,
           current: current,
-          limit: limit
+          limit: skip
         }
       });
     } catch (error) {
@@ -63,7 +65,7 @@ export class ClassroomController {
     }
   }
 
-  // ! GET /api/v1/classrooms/:id
+  // ! GET /api/v1/courses/:id
 
   /**
    * @returns
@@ -74,10 +76,11 @@ export class ClassroomController {
    *     name: "...",
    *     code: "...",
    *     description: "...",
+   *     thumbnail: "...",
    *     teacher: "...",
    *     feed: "...",
    *     fee: 500000,
-   *     capacity: 50,
+   *     grade: 12,
    *     active: true,
    *     status: false,
    *     created: "...",
@@ -88,8 +91,26 @@ export class ClassroomController {
    *     teacherRef: {
    *       name: "...",
    *       email: "...",
-   *       avatar: "..."
+   *       avatar: "...",
+   *       bio: "...",
+   *       degree: "..."
    *     },
+   *     chapters: [
+   *       {
+   *         id: "...",
+   *         title: "...",
+   *         created: "...",
+   *         lessons: [
+   *           {
+   *             id: "...",
+   *             title: "...",
+   *             video: "...",
+   *             content: "...",
+   *             created: "..."
+   *           }
+   *         ]
+   *       }
+   *     ],
    *     members: [
    *       {
    *         id: "...",
@@ -118,7 +139,7 @@ export class ClassroomController {
     try {
       const { id } = req.params;
       const user = res.locals.user.id;
-      const result = await ClassroomService.HandleGetById(String(id), user);
+      const result = await CoursesService.HandleGetById(String(id), user);
 
       return res.status(200).json({
         success: true,
@@ -129,7 +150,7 @@ export class ClassroomController {
     }
   }
 
-  // ! POST /api/v1/classrooms
+  // ! POST /api/v1/courses
 
   /**
    * @returns
@@ -140,11 +161,11 @@ export class ClassroomController {
    *     name: "...",
    *     code: "...",
    *     description: "...",
+   *     thumbnail: "...",
    *     teacher: "...",
    *     feed: "...",
    *     fee: 0,
    *     grade: 1,
-   *     capacity: 50,
    *     active: true,
    *     status: false,
    *     created: "...",
@@ -157,8 +178,8 @@ export class ClassroomController {
 
   static async HandleCreate(req: Request, res: Response, next: NextFunction) {
     try {
-      const id =res.locals.user.id;
-      const result = await ClassroomService.HandleCreate(id, req.body);
+      const id = res.locals.user.id;
+      const result = await CoursesService.HandleCreate(id, req.body);
 
       return res.status(201).json({
         success: true,
@@ -169,7 +190,7 @@ export class ClassroomController {
     }
   }
 
-  // ! PUT /api/v1/classrooms/:id
+  // ! PUT /api/v1/courses/:id
 
   /**
    * @returns
@@ -180,10 +201,11 @@ export class ClassroomController {
    *     name: "...",
    *     code: "...",
    *     description: "...",
+   *     thumbnail: "...",
    *     teacher: "...",
    *     feed: "...",
    *     fee: 500000,
-   *     capacity: 50,
+   *     grade: 12,
    *     active: true,
    *     status: false,
    *     created: "...",
@@ -196,8 +218,8 @@ export class ClassroomController {
   static async HandleUpdate(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
-      const user = res.locals.users.id;
-      const result = await ClassroomService.HandleUpdate(String(id), user, req.body);
+      const user = res.locals.user.id;
+      const result = await CoursesService.HandleUpdate(String(id), user, req.body);
 
       return res.status(200).json({
         success: true,
@@ -208,7 +230,7 @@ export class ClassroomController {
     }
   }
 
-  // ! DELETE /api/v1/classrooms/:id
+  // ! DELETE /api/v1/courses/:id
 
   /**
    * @returns
@@ -219,11 +241,11 @@ export class ClassroomController {
    *     name: "...",
    *     code: "...",
    *     description: "...",
+   *     thumbnail: "...",
    *     teacher: "...",
    *     feed: "...",
    *     fee: 0,
    *     grade: 1,
-   *     capacity: 50,
    *     active: true,
    *     status: false,
    *     created: "...",
@@ -236,8 +258,8 @@ export class ClassroomController {
   static async HandleDelete(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
-      const user = res.locals.users.id;
-      await ClassroomService.HandleDelete(String(id), user);
+      const user = res.locals.user.id;
+      await CoursesService.HandleDelete(String(id), user);
 
       return res.status(200).json({
         success: true

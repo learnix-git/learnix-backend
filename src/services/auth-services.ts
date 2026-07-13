@@ -120,15 +120,19 @@ export class AuthService {
           email: payload.email,
           name: payload.name || "Người dùng Google",
           avatar: payload.picture || null,
+          provider: "google",
           password: crypto.randomBytes(32).toString('hex'), 
           role: "STUDENT",
         },
       });
     } else {
       // Cập nhật giờ login nếu đã có tài khoản
-      await prisma.user.update({
+      user = await prisma.user.update({
         where: { id: user.id },
-        data: { login: new Date() },
+        data: { 
+          login: new Date(),
+          provider: "google" 
+        },
       });
     }
 
@@ -160,6 +164,12 @@ export class AuthService {
     if (!user) 
       throw new Error("Email này chưa được đăng ký trên hệ thống!");
 
+    if (user.provider === "google") {
+      const google = new Error("Tài khoản này đăng nhập bằng Google. Vui lòng đăng nhập qua Google!");
+      (google as any).provider = "google";
+      throw google;
+    }
+    
     const reset_token = crypto.randomBytes(32).toString("hex");
     const reset_expire = new Date(Date.now() + 15 * 60 * 1000);
 
@@ -175,56 +185,67 @@ export class AuthService {
       to: email,
       subject: "Khôi phục mật khẩu tài khoản Learnix",
       html: `
-        <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f8fafc; padding: 32px 16px;">
-          <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 20px; overflow: hidden;">
+        <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 24px; background-color: #ffffff;">
 
-            <!-- Header -->
-            <div style="background-color: #3b82f6; padding: 28px 32px; text-align: center;">
-              <span style="color: #ffffff; font-size: 22px; font-weight: 800; letter-spacing: -0.02em;">Learnix</span>
-            </div>
+          <!-- Brand -->
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 24px;">
+            <tr>
+              <td align="center" style="color: #3b82f6; font-size: 20px; font-weight: 800; letter-spacing: -0.02em;">
+                Learnix Support
+              </td>
+            </tr>
+          </table>
 
-            <!-- Body -->
-            <div style="padding: 32px;">
-              <div style="width: 56px; height: 56px; background-color: #eff6ff; border-radius: 16px; display: flex; align-items: center; justify-content: center; margin-bottom: 20px;">
-                <span style="font-size: 26px;">🔒</span>
-              </div>
+          <!-- Heading -->
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 32px;">
+            <tr>
+              <td align="center" style="color: #0f172a; font-size: 22px; font-weight: 400; line-height: 1.4;">
+                Yêu cầu đặt lại mật khẩu, <strong style="font-weight: 700;">${email}</strong>
+              </td>
+            </tr>
+          </table>
 
-              <h2 style="color: #0f172a; font-size: 20px; font-weight: 800; margin: 0 0 12px;">Yêu cầu đặt lại mật khẩu</h2>
+          <!-- Box -->
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #e2e8f0; border-radius: 12px;">
+            <tr>
+              <td style="padding: 28px 32px;">
 
-              <p style="color: #475569; font-size: 14px; line-height: 1.6; margin: 0 0 8px;">Chào bạn,</p>
-              <p style="color: #475569; font-size: 14px; line-height: 1.6; margin: 0 0 8px;">
-                Chúng tôi nhận được yêu cầu khôi phục mật khẩu cho tài khoản Learnix liên kết với email này.
-              </p>
-              <p style="color: #475569; font-size: 14px; line-height: 1.6; margin: 0 0 24px;">
-                Vui lòng nhấp vào nút bên dưới để thiết lập mật khẩu mới. Link có hiệu lực trong
-                <strong style="color: #0f172a;">15 phút</strong>.
-              </p>
-
-              <div style="text-align: center; margin: 32px 0;">
-                <a href="${url}" style="background-color: #3b82f6; color: #ffffff; padding: 14px 32px; text-decoration: none; font-weight: 700; font-size: 14px; border-radius: 12px; display: inline-block; box-shadow: 0 4px 14px rgba(59,130,246,0.35);">
-                  Đặt lại mật khẩu ngay
-                </a>
-              </div>
-
-              <p style="color: #94a3b8; font-size: 12px; line-height: 1.6; word-break: break-all; margin: 0 0 24px;">
-                Nếu nút bên trên không hoạt động, hãy sao chép và dán đường link sau vào trình duyệt:<br />
-                <a href="${url}" style="color: #3b82f6;">${url}</a>
-              </p>
-
-              <div style="border-top: 1px solid #e2e8f0; padding-top: 20px;">
-                <p style="color: #94a3b8; font-size: 12px; line-height: 1.6; margin: 0;">
-                  Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email — tài khoản của bạn vẫn an toàn.
+                <p style="color: #334155; font-size: 14px; line-height: 1.6; margin: 0 0 20px;">
+                  Chúng tôi nhận được yêu cầu khôi phục mật khẩu cho tài khoản Learnix liên kết với email này.
                 </p>
-              </div>
-            </div>
 
-            <!-- Footer -->
-            <div style="background-color: #f8fafc; padding: 20px 32px; text-align: center; border-top: 1px solid #e2e8f0;">
-              <p style="color: #94a3b8; font-size: 12px; margin: 0;">
-                © ${new Date().getFullYear()} Learnix. Nền tảng học tập & giảng dạy trực tuyến.
-              </p>
-            </div>
-          </div>
+                <!-- Button -->
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 24px 0;">
+                  <tr>
+                    <td align="center">
+                      <a href="${url}" style="background-color: #3b82f6; color: #ffffff; padding: 12px 28px; text-decoration: none; font-weight: 700; font-size: 14px; border-radius: 8px; display: inline-block;">
+                        Đặt lại mật khẩu ngay
+                      </a>
+                    </td>
+                  </tr>
+                </table>
+
+                <p style="color: #334155; font-size: 14px; line-height: 1.6; margin: 20px 0 0;">
+                  Link này có hiệu lực trong <strong style="white-space: nowrap;">15&nbsp;phút</strong> và chỉ dùng được một lần.
+                </p>
+
+                <p style="color: #334155; font-size: 14px; line-height: 1.6; margin: 12px 0 0;">
+                  <strong>Vui lòng không chia sẻ link này với bất kỳ ai</strong>: chúng tôi sẽ không bao giờ yêu cầu qua điện thoại hoặc email.
+                </p>
+
+              </td>
+            </tr>
+          </table>
+
+          <!-- Footer -->
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top: 28px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
+            <tr>
+              <td style="color: #94a3b8; font-size: 12px; line-height: 1.6;">
+                Bạn nhận được email này vì có yêu cầu đặt lại mật khẩu cho tài khoản Learnix của bạn. Nếu đây không phải bạn, vui lòng bỏ qua email này.
+              </td>
+            </tr>
+          </table>
+
         </div>
       `,
     };

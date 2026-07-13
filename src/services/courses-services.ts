@@ -7,26 +7,25 @@ const adapter = new PrismaPg({
 
 const prisma = new PrismaClient({ adapter });
 
-export class ClassroomService {
+export class CoursesService {
 
-  // ! Hàm lấy tất cả
+  // ! Hàm lấy tất cả khóa học
   static async HandleGetAll({ search, page, limit }: { search: string; page: number; limit: number }) {
     const skip = (page - 1) * limit;
 
-    const [classrooms, items] = await Promise.all([
-      prisma.classroom.findMany({
+    const [courses, items] = await Promise.all([
+      prisma.course.findMany({
         where: {
           deleted: null,
           OR: [
             { name: { contains: search, mode: "insensitive" } },
             { code: { contains: search, mode: "insensitive" } },
             { description: { contains: search, mode: "insensitive" } },
-            { address: { contains: search, mode: "insensitive" } }
           ],
         },
         include: {
           teacherRef: {
-            select: { name: true, avatar: true }
+            select: { name: true, avatar: true, bio: true, degree: true }
           }
         },
         skip: skip,
@@ -34,7 +33,7 @@ export class ClassroomService {
         orderBy: { created: "desc" },
       }),
       
-      prisma.classroom.count({
+      prisma.course.count({
         where: {
           deleted: null,
           OR: [
@@ -46,19 +45,19 @@ export class ClassroomService {
     ]);
 
     return {
-      classrooms,
+      courses,
       items,
       pages: Math.ceil(items / limit),
     };
   }
 
-  // ! Hàm lấy theo ID
+  // ! Hàm lấy theo ID 
   static async HandleGetById(id: string, user: string) {
-    const classroom = await prisma.classroom.findUnique({
+    const course = await prisma.course.findUnique({
       where: { id },
       include: {
         teacherRef: {
-          select: { name: true, email: true, avatar: true }
+          select: { name: true, email: true, avatar: true, bio: true, degree: true }
         },
         members: {
           select: {
@@ -66,6 +65,22 @@ export class ClassroomService {
             student: true,
             studentRef: {
               select: { name: true, avatar: true }
+            }
+          }
+        },
+        chapters: {
+          select: {
+            id: true,
+            title: true,
+            created: true,
+            lessons: {
+              select: {
+                id: true,
+                title: true,
+                video: true,
+                content: true,
+                created: true
+              }
             }
           }
         },
@@ -83,35 +98,42 @@ export class ClassroomService {
       }
     });
 
-    if (!classroom || classroom.deleted) {
-      const error = new Error("Không tìm thấy lớp học");
+    if (!course || course.deleted) {
+      const error = new Error("Không tìm thấy khóa học");
       (error as any).statusCode = 404;
       throw error;
     }
 
-    // Kiểm tra xem user có phải giáo viên không
-    const isTeacher = classroom.teacher === user;
-
-    // Kiểm tra xem user có phải học sinh không
-    const isStudent = classroom.members.some(member => member.student === user);
+    const isTeacher = course.teacher === user;
+    const isStudent = course.members.some(member => member.student === user);
 
     if (!isTeacher && !isStudent) {
+      const maskedChapters = course.chapters.map(chapter => ({
+        ...chapter,
+        lessons: chapter.lessons.map(lesson => ({
+          ...lesson,
+          video: null,   
+          content: null  
+        }))
+      }));
+
       return {
-        ...classroom,
+        ...course,
         feed: "",         
         exams: [],        
         members: [],      
+        chapters: maskedChapters,
         joined: false
       };
     }
 
     return {
-      ...classroom,
+      ...course,
       joined: true
     };
   }
 
-  // * Hàm tạo mã lớp học tự động * //
+  // * Hàm tạo mã khóa học tự động * //
   static async GenerateCode(): Promise<string> {
     const part = (length: number) => {
       return Math.random().toString(36).substring(2, 2 + length).toUpperCase();
@@ -119,13 +141,12 @@ export class ClassroomService {
     
     const code = `${part(4)}-${part(3)}-${part(4)}`;
     
-    // Kiểm tra trùng
-    const existing = await prisma.classroom.findUnique({ where: { code } });
+    const existing = await prisma.course.findUnique({ where: { code } });
     if (existing) return this.GenerateCode(); 
     return code;
   }
 
-  // ! Hàm tạo lớp học
+  // ! Hàm tạo khóa học
   static async HandleCreate(id: string, data: any) {
     const user = await prisma.user.findUnique({
       where: { id: id },
@@ -138,44 +159,42 @@ export class ClassroomService {
       throw error;
     }
 
-    // Chặn gọi API nếu là học sinh
     if (user.role === "STUDENT") {
-      const error = new Error("Học sinh không có quyền tạo lớp học");
+      const error = new Error("Học sinh không có quyền tạo khóa học");
       (error as any).statusCode = 403;
       throw error;
     }
 
     const code = await this.GenerateCode();
 
-    // Tạo lớp nếu là giáo viên
-    return await prisma.classroom.create({
+    return await prisma.course.create({
       data: {
         name: data.name,
         code: code,
         description: data.description,
-        address: data.address,
+        thumbnail: data.thumbnail,
         feed: data.feed,
         fee: data.fee ?? 0,
-        capacity: data.capacity ?? 50,
+        grade: data.grade ?? 1,
         teacher: id,
       },
     });
   }
 
-  // ! Hàm sửa thông tin lớp học
+  // ! Hàm sửa thông tin khóa học
   static async HandleUpdate(id: string, user: string, data: any) {
-    const classroom = await prisma.classroom.findUnique({
+    const course = await prisma.course.findUnique({
       where: { id },
     });
 
-    if (!classroom || classroom.deleted) {
-      const error = new Error("Không tìm thấy lớp học");
+    if (!course || course.deleted) {
+      const error = new Error("Không tìm thấy khóa học");
       (error as any).statusCode = 404;
       throw error;
     }
 
-    if (classroom.teacher !== user) {
-      const error = new Error("Bạn không có quyền sửa đổi lớp học này");
+    if (course.teacher !== user) {
+      const error = new Error("Bạn không có quyền sửa đổi khóa học này");
       (error as any).statusCode = 403;
       throw error;
     }
@@ -185,42 +204,42 @@ export class ClassroomService {
     if (data.name !== undefined) updated.name = data.name;
     if (data.code !== undefined) updated.code = data.code;
     if (data.description !== undefined) updated.description = data.description;
+    if (data.thumbnail !== undefined) updated.thumbnail = data.thumbnail;
     if (data.feed !== undefined) updated.feed = data.feed;
     if (data.fee !== undefined) updated.fee = data.fee;
-    if (data.capacity !== undefined) updated.capacity = data.capacity;
+    if (data.grade !== undefined) updated.grade = data.grade;
     if (data.active !== undefined) updated.active = data.active;
     if (data.status !== undefined) updated.status = data.status;
-    if (data.address !== undefined) updated.address = data.address;
 
     if (Object.keys(updated).length === 0) {
-      return classroom;
+      return course;
     }
 
-    return await prisma.classroom.update({
+    return await prisma.course.update({
       where: { id },
       data: updated,
     });
   }
 
-  // ! Hàm xóa lớp học
+  // ! Hàm xóa khóa học
   static async HandleDelete(id: string, user: string) {
-    const classroom = await prisma.classroom.findUnique({
+    const course = await prisma.course.findUnique({
       where: { id },
     });
 
-    if (!classroom || classroom.deleted) {
-      const error = new Error("Không tìm thấy lớp học");
+    if (!course || course.deleted) {
+      const error = new Error("Không tìm thấy khóa học");
       (error as any).statusCode = 404;
       throw error;
     }
 
-    if (classroom.teacher !== user) {
-      const error = new Error("Bạn không có quyền sửa đổi lớp học này");
+    if (course.teacher !== user) {
+      const error = new Error("Bạn không có quyền sửa đổi khóa học này");
       (error as any).statusCode = 403;
       throw error;
     }
 
-    return await prisma.classroom.update({
+    return await prisma.course.update({
       where: { id },
       data: { deleted: new Date() },
     });

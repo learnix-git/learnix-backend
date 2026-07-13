@@ -12,5 +12,6 @@ router.post('/google-login', AuthController.google_login);
 router.post('/register', AuthController.register);
 router.post('/login', AuthController.login);
 router.post('/forgot-password', AuthController.forgot_password);
+router.post('/reset-password', AuthController.reset_password);
 
 export default router;

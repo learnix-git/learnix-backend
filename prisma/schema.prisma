@@ -1,8 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 datasource db {
   provider = "postgresql"
 }
@@ -18,16 +13,17 @@ enum Role {
 }
 
 enum Status {
-  PENDING   // Đang chờ thanh toán
-  COMPLETED // Thanh toán thành công
-  FAILED    // Giao dịch thất bại
-  CANCELLED // Người dùng hủy đơn
+  PENDING   
+  COMPLETED 
+  FAILED    
+  CANCELLED 
 }
 
 model Order {
   id          String      @id @default(cuid())
   userId      String
-  classId     String
+  courseId    String?    
+  bookingId   String?     
   amount      Int         
   status      Status      @default(PENDING)
   gateway     String      @default("VNPAY")
@@ -35,7 +31,8 @@ model Order {
   updated     DateTime    @updatedAt
 
   userRef     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  classRef    Classroom   @relation(fields: [classId], references: [id], onDelete: Cascade)
+  courseRef   Course?     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  bookingRef  Booking?    @relation(fields: [bookingId], references: [id], onDelete: Cascade)
 
   @@map("orders")
 }
@@ -55,56 +52,130 @@ model User {
   deleted  DateTime?
   token    String?  
   expire   DateTime?
+  provider String    @default("credentials")
   
-  classrooms    Classroom[]
+  courses       Course[]
   banks         Bank[]
   plans         Plan[]
   notifications Notification[]
   members       Member[]        @relation("studentRef")
   submissions   Submission[]
   orders        Order[]
+  cccd          String?   
+  degree        String?   
+  major         String?   
+  bio           String?   
+  fee           Float?    
+  phone         String?   
+  posts         Post[]
+  teachingRef   Booking[]       @relation("TeacherBookings")
+  bookingRef    Booking[]       @relation("StudentBookings")
 
   @@map("users")
 }
 
-model Classroom {
+model Course {
   id          String    @id @default(cuid())
   name        String
   code        String    @unique
   description String?
   teacher     String
+  thumbnail   String?  
   feed        Json      @default("[]")
   fee         Float     @default(0)
   grade       Int       @default(1)
-  capacity    Int       @default(50)
   active      Boolean   @default(true)
   status      Boolean   @default(false)
   created     DateTime  @default(now())
   updated     DateTime  @updatedAt
   deleted     DateTime?
   rating      Float     @default(0)
-  address     String?
 
-  teacherRef User     @relation(fields: [teacher], references: [id], onDelete: Cascade)
-  members    Member[] @relation("classroomRef")
-  exams      Exam[]
-  orders        Order[]
+  teacherRef  User      @relation(fields: [teacher], references: [id], onDelete: Cascade)
+  members     Member[]  @relation("courseRef")
+  exams       Exam[]
+  orders      Order[]
+  chapters    Chapter[]
 
-  @@map("classrooms")
+  @@map("courses")
+}
+
+model Chapter {
+  id       String   @id @default(cuid())
+  title    String
+  courseId String
+  created  DateTime @default(now())
+
+  courseRef Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons   Lesson[]
+
+  @@map("chapters")
+}
+
+model Lesson {
+  id        String   @id @default(cuid())
+  title     String
+  video     String?  
+  content   String?  
+  chapterId String
+  created   DateTime @default(now())
+
+  chapterRef Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+
+  @@map("lessons")
 }
 
 model Member {
   id        String   @id @default(cuid())
-  classroom String
+  course    String
   student   String
   role      String   @default("STUDENT")
   joined    DateTime @default(now())
 
-  classroomRef Classroom @relation("classroomRef", fields: [classroom], references: [id], onDelete: Cascade)
+  courseRef    Course    @relation("courseRef", fields: [course], references: [id], onDelete: Cascade)
   studentRef   User      @relation("studentRef", fields: [student], references: [id], onDelete: Cascade)
 
-  @@unique([classroom, student])
+  @@unique([course, student])
   @@map("members")
+}
+
+model Post {
+  id          String   @id @default(cuid())
+  userId      String   
+  title       String   
+  content     String   
+  type        String   
+  subject     String   
+  budget      Float    
+  address     String?  
+  contact     String?  
+  created     DateTime @default(now())
+  updated     DateTime @updatedAt
+
+  userRef     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("tutor_posts")
+}
+
+model Booking {
+  id          String   @id @default(cuid())
+  teacherId   String   
+  studentId   String   
+  start       DateTime?
+  schedule    String?
+  online      Boolean  @default(true) 
+  address     String?  
+  meet        String?  
+  status      String   @default("PENDING") 
+  fee         Float    
+  created     DateTime @default(now())
+  updated     DateTime @updatedAt
+
+  teacherRef  User     @relation("TeacherBookings", fields: [teacherId], references: [id], onDelete: Cascade)
+  studentRef  User     @relation("StudentBookings", fields: [studentId], references: [id], onDelete: Cascade)
+  orders      Order[]
+
+  @@map("bookings")
 }
 
 model Bank {
@@ -151,7 +222,7 @@ model Exam {
   duration    Int
   threshold   Float     @default(5.0)
   teacher     String
-  classroom   String?
+  course      String?
   questions   Json      @default("[]")
   config      Json      @default("{}")
   status      String    @default("DRAFT")
@@ -161,7 +232,7 @@ model Exam {
   updated     DateTime  @updatedAt
   deleted     DateTime?
 
-  classroomRef Classroom?   @relation(fields: [classroom], references: [id], onDelete: SetNull)
+  courseRef    Course?      @relation(fields: [course], references: [id], onDelete: SetNull)
   submissions  Submission[]
 
   @@map("exams")
@@ -193,7 +264,7 @@ model Score {
   id         String   @id @default(cuid())
   student    String
   exam       String
-  classroom  String?
+  course     String?
   submission String   @unique
   total      Float    @default(0)
   max        Float    @default(10.0)
