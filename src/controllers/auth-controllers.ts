@@ -9,14 +9,13 @@ export class AuthController {
       const result = await AuthService.register(validated);
 
       res.status(201).json({
-        success: true,
+        code: 201,
         data: result,
       });
     } catch (error: any) {
       res.status(400).json({
-        success: false,
+        code: 400,
         message: error.message || "Đã có lỗi xảy ra khi đăng ký!",
-        errors: error.errors || null,
       });
     }
   }
@@ -27,14 +26,13 @@ export class AuthController {
       const result = await AuthService.login(data);
 
       res.status(200).json({
-        success: true,
+        code: 200,
         data: result,
       });
     } catch (error: any) {
       res.status(400).json({
-        success: false,
+        code: 400,
         message: error.message || "Đăng nhập thất bại!",
-        errors: error.errors || null,
       });
     }
   }
@@ -44,18 +42,18 @@ export class AuthController {
       const { code, uri } = req.body;
       
       if (!code || !uri) {
-        return res.status(400).json({ success: false, message: "Thiếu dữ liệu Google Auth!" });
+        return res.status(400).json({ code: 400, message: "Thiếu dữ liệu Google Auth!" });
       }
 
       const result = await AuthService.google_login({ code, uri });
 
       res.status(200).json({
-        success: true,
+        code: 200,
         data: result,
       });
     } catch (error: any) {
       res.status(400).json({
-        success: false,
+        code: 400,
         message: error.message || "Đăng nhập bằng Google thất bại!",
       });
     }
@@ -68,7 +66,7 @@ export class AuthController {
       await AuthService.forgot_password(email);
 
       return res.status(200).json({
-        success: true,
+        code: 200,
         message: "Đã gửi hướng dẫn khôi phục mật khẩu vào email của bạn.",
       });
     } catch (error: any) {
@@ -76,7 +74,7 @@ export class AuthController {
       const provider = error.provider || null;
       
       return res.status(400).json({
-        success: false,
+        code: 400,
         message: message,
         data: {
           provider: provider
@@ -92,13 +90,13 @@ export class AuthController {
       await AuthService.reset_password(token, password);
 
       return res.status(200).json({
-        success: true,
+        code: 200,
         message: "Đặt lại mật khẩu thành công! Bạn có thể đăng nhập bằng mật khẩu mới.",
       });
     } catch (error: any) {
       const message = error.message || "Đặt lại mật khẩu thất bại. Vui lòng thử lại!";
       return res.status(400).json({
-        success: false,
+        code: 400,
         message: message,
       });
     }
@@ -109,9 +107,9 @@ export class AuthController {
       const id = res.locals.user.id; 
       
       const user = await AuthService.get_info(id);
-      res.status(200).json({ success: true, data: user });
+      res.status(200).json({ code: 200, data: user });
     } catch (error: any) {
-      res.status(500).json({ success: false, message: error.message });
+      res.status(500).json({ code: 500, message: error.message });
     }
   }
 }

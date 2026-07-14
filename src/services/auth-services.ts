@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
+import { Gender } from "@prisma/client";
 
 import { hash, compare } from '../utils/bcrypt';
 import { generate } from '../utils/jwt';
@@ -44,12 +45,18 @@ export class AuthService {
     // Mã hóa mật khẩu
     const pass = await hash(data.password);
 
+    const map: Record<number, Gender> = {
+      0: Gender.MALE,
+      1: Gender.FEMALE,
+      2: Gender.OTHER,
+    };
+
     const user = await prisma.user.create({
       data: {
         email: data.email,
         password: pass,
         name: data.name,
-        gender: data.gender,
+        gender: map[data.gender] || Gender.OTHER,
         role: data.role || "STUDENT",
       },
     });
