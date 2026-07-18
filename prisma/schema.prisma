@@ -75,6 +75,18 @@ enum Type {
   FINAL
 }
 
+enum ChatType {
+  DIRECT
+  COURSE
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  FILE
+  SYSTEM
+}
+
 model User {
   id       String    @id @default(cuid())
   email    String    @unique
@@ -108,6 +120,7 @@ model User {
   chats1        Chat[]         @relation("UserOne")
   chats2        Chat[]         @relation("UserTwo")
   messages      Message[]
+  attachments   Attachment[]
   reports1      Report[]       @relation("Creator")
   reports2      Report[]       @relation("Target")
   audits        Audit[]
@@ -310,6 +323,7 @@ model Course {
   faqs      Faq[]
   notices   Notice[]
   progress  Progress[]
+  chats     Chat[]
 }
 
 model Faq {
@@ -694,30 +708,49 @@ model Booking {
 }
 
 model Chat {
-  id      String   @id @default(cuid())
+  id      String    @id @default(cuid())
+  type    ChatType  @default(DIRECT)
   user1   String
   user2   String
-  created DateTime @default(now())
-  updated DateTime @updatedAt
+  core    String?
+  read1   DateTime?
+  read2   DateTime?
+  created DateTime  @default(now())
+  updated DateTime  @updatedAt
 
   first    User      @relation("UserOne", fields: [user1], references: [id], onDelete: Cascade)
   second   User      @relation("UserTwo", fields: [user2], references: [id], onDelete: Cascade)
+  course   Course?   @relation(fields: [core], references: [id], onDelete: SetNull)
   messages Message[]
 
-  @@unique([user1, user2])
+  @@unique([user1, user2, core])
 }
 
 model Message {
-  id      String   @id @default(cuid())
+  id      String      @id @default(cuid())
   room    String
   sender  String
-  content String   @db.Text
-  file    String?
-  read    Boolean  @default(false)
+  type    MessageType @default(TEXT)
+  content String?     @db.Text
+  attach  String?     @unique
+  created DateTime    @default(now())
+
+  chat       Chat        @relation(fields: [room], references: [id], onDelete: Cascade)
+  user       User        @relation(fields: [sender], references: [id], onDelete: Cascade)
+  attachment Attachment? @relation(fields: [attach], references: [id], onDelete: SetNull)
+}
+
+model Attachment {
+  id      String   @id @default(cuid())
+  owner   String
+  name    String
+  mime    String
+  size    Int
+  url     String
   created DateTime @default(now())
 
-  chat Chat @relation(fields: [room], references: [id], onDelete: Cascade)
-  user User @relation(fields: [sender], references: [id], onDelete: Cascade)
+  user    User     @relation(fields: [owner], references: [id], onDelete: Cascade)
+  message Message?
 }
 
 model Report {
