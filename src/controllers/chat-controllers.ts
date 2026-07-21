@@ -10,6 +10,7 @@ import {
   TypingSchema,
 } from '../validations/chat-validations';
 import { checkOnline } from '../sockets/handlers/presence-handlers';
+import { getIO } from '../sockets/init';
 
 export class ChatController {
   // ! Tạo hoặc lấy lại cuộc trò chuyện
@@ -51,18 +52,27 @@ export class ChatController {
     }
   }
 
-  // ! Gửi tin nhắn qua REST (fallback khi socket lỗi)
+  // ! Gửi tin nhắn
   static async send(req: Request, res: Response) {
     try {
       const userId = res.locals.user.id;
       const { conversationId, ...payload } = req.body;
-
       if (!conversationId || typeof conversationId !== "string") {
         return res.status(400).json({ code: 400, message: "Thiếu conversationId" });
       }
-
       const validated = MessageSchema.parse(payload);
       const message = await ChatService.post_message(conversationId, userId, validated as any);
+
+      getIO().to(`conversation:${conversationId}`).emit("message:new", {
+        messageId: message.id,
+        conversationId: message.conversationId,
+        senderId: message.sender.id,
+        senderName: message.sender.name,
+        type: message.type,
+        content: message.content,
+        attachmentId: message.attachment?.id ?? null,
+        createdAt: message.createdAt,
+      });
 
       res.status(200).json({ code: 200, message });
     } catch (error: any) {
@@ -83,8 +93,7 @@ export class ChatController {
     }
   }
 
-  // ! Trạng thái đang gõ qua REST — kênh chính vẫn là socket typing:start/stop,
-  // useChatTyping.ts hiện tại KHÔNG gọi endpoint này, để dành cho fallback
+  // ! Trạng thái đang gõ qua REST
   static async typing(req: Request, res: Response) {
     try {
       const { conversationId, typing } = TypingSchema.parse(req.body);
@@ -94,8 +103,7 @@ export class ChatController {
     }
   }
 
-  // ! Kiểm tra userId nào đang online — trạng thái sống trong bộ nhớ tầng socket,
-  // TẠM stub rỗng, sẽ nối với sockets/presence-state.ts ở bước 6
+  // ! Kiểm tra userId nào đang online
   static async online(req: Request, res: Response) {
     try {
     const { userIds } = OnlineSchema.parse(req.body);

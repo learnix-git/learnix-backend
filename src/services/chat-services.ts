@@ -144,9 +144,19 @@ export class ChatService {
 
   // ! Tạo tin nhắn — dùng chung cho REST và socket
   static async post_message(conversationId: string, senderId: string, payload: Payload) {
-    await this.check_role(conversationId, senderId);
+    const [chat, sender] = await Promise.all([
+      this.check_role(conversationId, senderId),
+      prisma.user.findUnique({
+        where: { id: senderId },
+        select: { id: true, name: true, avatar: true, role: true },
+      }),
+    ]);
 
-    let attachmentId: string | null = null;
+    if (!sender) {
+      throw new Error("Người dùng không tồn tại!");
+    }
+
+    let attachmentRecord: { id: string; name: string; mime: string; size: number; url: string } | null = null;
 
     if (payload.type !== "text") {
       const attachment = await prisma.attachment.findUnique({ where: { id: payload.attachmentId } });
@@ -162,7 +172,7 @@ export class ChatService {
         throw new Error("Tệp đính kèm đã được sử dụng cho tin nhắn khác!");
       }
 
-      attachmentId = attachment.id;
+      attachmentRecord = attachment;
     }
 
     const message = await prisma.message.create({
@@ -171,17 +181,18 @@ export class ChatService {
         sender: senderId,
         type: payload.type.toUpperCase() as any,
         content: payload.type === "text" ? payload.content : (payload.content ?? null),
-        attach: attachmentId,
-      },
-      include: {
-        user: { select: { id: true, name: true, avatar: true, role: true } },
-        attachment: true,
+        attach: attachmentRecord?.id ?? null,
       },
     });
 
-    await prisma.chat.update({ where: { id: conversationId }, data: { updated: new Date() } });
+    prisma.chat.update({ where: { id: conversationId }, data: { updated: new Date() } })
+      .catch((err) => console.error("[chat] update chat.updated thất bại:", err));
 
-    return this.map_message(message);
+    return this.map_message({
+      ...message,
+      user: sender,
+      attachment: attachmentRecord,
+    });
   }
 
   // ! Đánh dấu đã đọc — lưu mốc thời gian
@@ -237,6 +248,7 @@ export class ChatService {
     ownerId: string,
     file: { buffer: Buffer; originalname: string; mimetype: string; size: number }
   ) {
+    const t0 = Date.now();
     const isImage = file.mimetype.startsWith("image/");
 
     const result = await new Promise<UploadApiResponse>((resolve, reject) => {
@@ -257,7 +269,7 @@ export class ChatService {
       );
       stream.end(file.buffer);
     });
-
+console.log("[perf] cloudinary upload:", Date.now() - t0, "ms", "size:", file.size);
     const attachment = await prisma.attachment.create({
       data: {
         owner: ownerId,
@@ -267,6 +279,7 @@ export class ChatService {
         url: result.secure_url,
       },
     });
+  console.log("[perf] attachment.create:", Date.now() - t0, "ms");
 
     return {
       attachmentId: attachment.id,

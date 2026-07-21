@@ -7,6 +7,13 @@ import { registerReceiptHandlers } from "./handlers/receipt-handlers";
 import { registerTypingHandlers } from "./handlers/typing-handlers";
 import { registerPresenceHandlers } from "./handlers/presence-handlers";
 
+let ioInstance: Server | undefined;
+
+export function getIO(): Server {
+  if (!ioInstance) throw new Error("Socket.io chưa được khởi tạo");
+  return ioInstance;
+}
+
 export function initSocket(httpServer: HttpServer) {
   const io = new Server(httpServer, {
     cors: { origin: process.env.CORS_ORIGIN?.split(",") ?? "*", credentials: true },
