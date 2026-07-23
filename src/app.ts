@@ -5,6 +5,7 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import AuthRoute from './routes/auth-routes';
 import ChatRoute from './routes/chat-routes';
+import NotificationRoute from './routes/notification-routes';
  
 dotenv.config();
 
@@ -34,6 +35,7 @@ app.use(express.json());
 
 app.use('/api/v1/auth', AuthRoute);
 app.use('/api/v1/chat', ChatRoute);
+app.use('/api/v1/notifications', NotificationRoute);
 
 app.get('/api/v1/health', (req: Request, res: Response) => {
   res.status(200).json({ status: 'SUCCESS', message: 'Backend đang chạy ... !' });

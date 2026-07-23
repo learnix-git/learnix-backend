@@ -880,18 +880,24 @@ model Plan {
 }
 
 model Notification {
-  id       String    @id @default(cuid())
-  owner    String
-  title    String
-  message  String?   @db.Text
-  type     String    @default("SYSTEM")
-  priority Int       @default(1)
-  read     Boolean   @default(false)
-  opened   DateTime?
-  expired  DateTime?
-  created  DateTime  @default(now())
+  id        String    @id @default(cuid())
+  owner     String
+  type      String
+  title     String
+  content   String    @db.Text
+  sourceId  String?
+  alias     String?
+  groupKey  String?
+  actorId   String?
+  actorName String?
+  read      Boolean   @default(false)
+  opened    DateTime?
+  created   DateTime  @default(now())
 
   user User @relation(fields: [owner], references: [id], onDelete: Cascade)
+
+  @@index([owner, created])
+  @@index([owner, groupKey])
 }
 
 model Audit {

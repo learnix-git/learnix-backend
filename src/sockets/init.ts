@@ -22,6 +22,9 @@ export function initSocket(httpServer: HttpServer) {
   io.use(socketAuth);
 
   io.on("connection", (socket) => {
+    const userId = socket.data.user?.id;
+    if (userId) socket.join(`user:${userId}`);
+
     registerPresenceHandlers(io, socket);
     registerConversationHandlers(io, socket);
     registerMessageHandlers(io, socket);
