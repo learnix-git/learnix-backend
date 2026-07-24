@@ -8,54 +8,8 @@ generator client {
 
 enum Role {
   STUDENT
-  TEACHER
+  TUTOR
   ADMIN
-}
-
-enum Status {
-  PENDING
-  PROCESSING
-  READY
-  COMPLETED
-  FAILED
-  CANCELLED
-  REFUNDED
-  DRAFT
-  PUBLISHED
-  ARCHIVED
-  ACTIVE
-  SUSPENDED
-  EXPIRED
-  VERIFIED
-  REJECTED
-  RESOLVED
-  AWAITING
-  CONFIRMED
-}
-
-enum Level {
-  BEGINNER
-  INTERMEDIATE
-  ADVANCED
-  ALL
-}
-
-enum Format {
-  VIDEO
-  TEXT
-  QUIZ
-  ASSIGNMENT
-}
-
-enum Method {
-  PERCENTAGE
-  FIXED
-}
-
-enum Access {
-  ALL
-  FREE
-  PREMIUM
 }
 
 enum Gender {
@@ -69,18 +23,43 @@ enum Mode {
   OFFLINE
 }
 
+enum Level {
+  PRIMARY
+  MIDDLE
+  HIGH
+  ALL
+}
+
+enum State {
+  PENDING
+  VERIFIED
+  REJECTED
+  OPEN
+  ACTIVE
+  DONE
+  FAILED
+  CANCEL
+  HOLD
+  RELEASE
+  REFUND
+  DISPUTE
+}
+
 enum Type {
-  PURCHASE
   DEPOSIT
+  PAYMENT
+  PAYOUT
+  COMMISSION
+  PENALTY
+}
+
+enum Phase {
+  FIRST
   FINAL
+  FULL
 }
 
-enum ChatType {
-  DIRECT
-  COURSE
-}
-
-enum MessageType {
+enum Kind {
   TEXT
   IMAGE
   FILE
@@ -92,10 +71,11 @@ model User {
   email    String    @unique
   password String
   name     String
+  alias    String?
+  dob      DateTime?
   role     Role      @default(STUDENT)
   gender   Gender    @default(OTHER)
   avatar   String?
-  active   Boolean   @default(true)
   phone    String?
   login    DateTime?
   token    String?
@@ -104,399 +84,375 @@ model User {
   blocked  DateTime?
   secured  Boolean   @default(false)
   secret   String?
+  provider String    @default("credentials")
+  active   Boolean   @default(true)
   created  DateTime  @default(now())
   updated  DateTime  @updatedAt
   deleted  DateTime?
-  provider String    @default("credentials")
 
   student Student?
-  teacher Teacher?
+  tutor   Tutor?
 
-  sessions      Session[]
-  wallets       Wallet[]
-  notifications Notification[]
-  orders        Order[]
-  usages        Usage[]
-  chats1        Chat[]         @relation("UserOne")
-  chats2        Chat[]         @relation("UserTwo")
-  messages      Message[]
-  attachments   Attachment[]
-  reports1      Report[]       @relation("Creator")
-  reports2      Report[]       @relation("Target")
-  audits        Audit[]
+  banks       Bank[]
+  notices     Notice[]
+  firsts      Chat[]       @relation("One")
+  seconds     Chat[]       @relation("Two")
+  attachments Attachment[]
+  messages    Message[]
+  claims      Report[]     @relation("Creator")
+  charges     Report[]     @relation("Target")
+  audits      Audit[]
+  payments    Payment[]
+
+  @@index([role, active])
+  @@index([created])
 }
 
 model Student {
-  id      String   @id @default(cuid())
-  account String   @unique
-  created DateTime @default(now())
-  updated DateTime @updatedAt
-
-  user User @relation(fields: [account], references: [id], onDelete: Cascade)
-
-  enrolls  Enrollment[]
-  progress Progress[]
-  cart     Cart?
-  subs     Submission[]
-  tasks    Task[]
-  plans    Plan[]
-  votes    Vote[]
-  comments Comment[]
-  reviews  Review[]
-  favs     Favorite[]
-  follows  Follow[]
-  certs    Certificate[]
-  bookings Booking[]     @relation("StudentBookings")
-}
-
-model Teacher {
-  id      String @id @default(cuid())
-  account String @unique
-
-  bio      String?  @db.Text
-  cccd     String?  @unique
-  degree   String?
-  major    String?
-  website  String?
-  github   String?
-  linkedin String?
-  rate     Decimal  @default(0.00) @db.Decimal(12, 2)
-  video    String?
-  verified Status   @default(PENDING)
-  years    Int      @default(0)
-  modes    Mode[]
-  rating   Decimal  @default(0.00) @db.Decimal(3, 2)
-  reviews  Int      @default(0)
-  students Int      @default(0)
+  id       String   @id @default(cuid())
+  user     String   @unique
+  city     String?
+  district String?
+  ward     String?
+  street   String?
+  lat      Float?
+  lng      Float?
   created  DateTime @default(now())
   updated  DateTime @updatedAt
 
-  user User @relation(fields: [account], references: [id], onDelete: Cascade)
+  account User @relation(fields: [user], references: [id], onDelete: Cascade)
 
-  courses  Course[]
-  banks    Bank[]
-  exams    Exam[]
-  posts    Post[]
-  bids     Bid[]
-  skills   Skill[]
-  schedule Schedule[]
-  timeoffs Timeoff[]
-  coupons  Coupon[]
-  reviewed Review[]   @relation("TeacherReviews")
-  bookings Booking[]  @relation("TeacherBookings")
-  follows  Follow[]
+  needs   Request[]
+  deals   Contract[]
+  reviews Review[]
+  follows Follow[]
+
+  @@index([city, district])
 }
 
-model Session {
-  id      String   @id @default(cuid())
-  owner   String
-  refresh String   @unique
-  agent   String?
-  ip      String?
-  expire  DateTime
-  revoked Boolean  @default(false)
-  created DateTime @default(now())
+model Tutor {
+  id       String   @id @default(cuid())
+  user     String   @unique
+  bio      String?  @db.Text
+  idcard   String?  @unique
+  level    String?
+  major    String?
+  school   String?
+  exp      Int      @default(0)
+  status   State    @default(PENDING)
+  rate     Decimal  @default(0.00) @db.Decimal(12, 2)
+  modes    Mode[]
+  city     String?
+  district String?
+  ward     String?
+  street   String?
+  lat      Float?
+  lng      Float?
+  rating   Decimal  @default(0.00) @db.Decimal(3, 2)
+  reviews  Int      @default(0)
+  created  DateTime @default(now())
+  updated  DateTime @updatedAt
 
-  user User @relation(fields: [owner], references: [id], onDelete: Cascade)
+  account User @relation(fields: [user], references: [id], onDelete: Cascade)
+
+  skills  Skill[]
+  slots   Schedule[]
+  posts   Post[]
+  bids    Bid[]
+  deals   Contract[]
+  rates   Review[]
+  follows Follow[]
+  degrees Degree[]
+  jobs    History[]
+  marks   Bookmark[]
+
+  @@index([status, rating])
+  @@index([city, district])
+  @@index([exp])
 }
 
-model Wallet {
+model Bank {
   id      String   @id @default(cuid())
   owner   String
-  bank    String
-  account String
+  name    String
+  number  String
   holder  String
-  main    Boolean  @default(false)
+  branch  String?
+  primary Boolean  @default(false)
   created DateTime @default(now())
   updated DateTime @updatedAt
 
-  user User @relation(fields: [owner], references: [id], onDelete: Cascade)
+  user  User      @relation(fields: [owner], references: [id], onDelete: Cascade)
+  bills Payment[]
+}
+
+model Degree {
+  id      String   @id @default(cuid())
+  owner   String
+  name    String
+  type    String
+  score   String?
+  issuer  String?
+  year    Int?
+  url     String
+  status  State    @default(PENDING)
+  created DateTime @default(now())
+
+  tutor Tutor @relation(fields: [owner], references: [id], onDelete: Cascade)
+
+  @@index([owner, status])
+}
+
+model History {
+  id      String   @id @default(cuid())
+  owner   String
+  title   String
+  place   String
+  start   Int
+  end     Int?
+  desc    String?  @db.Text
+  created DateTime @default(now())
+
+  tutor Tutor @relation(fields: [owner], references: [id], onDelete: Cascade)
+
+  @@index([owner])
 }
 
 model Subject {
-  id     String  @id @default(cuid())
-  name   String  @unique
-  slug   String  @unique
+  id     String    @id @default(cuid())
+  name   String    @unique
+  slug   String    @unique
   skills Skill[]
+  needs  Request[]
+  posts  Post[]
 }
 
 model Skill {
-  tutor  String
+  owner  String
   topic  String
-  grades String[]
+  grades Int[]
 
-  teacher Teacher @relation(fields: [tutor], references: [id], onDelete: Cascade)
+  tutor   Tutor   @relation(fields: [owner], references: [id], onDelete: Cascade)
   subject Subject @relation(fields: [topic], references: [id], onDelete: Cascade)
 
-  @@id([tutor, topic])
+  @@id([owner, topic])
+  @@index([topic])
 }
 
-model Schedule {
-  id      String   @id @default(cuid())
-  tutor   String
-  day     Int
-  start   String
-  end     String
-  repeat  Boolean  @default(true)
-  active  Boolean  @default(true)
-  created DateTime @default(now())
-  updated DateTime @updatedAt
-
-  teacher Teacher @relation(fields: [tutor], references: [id], onDelete: Cascade)
-}
-
-model Timeoff {
-  id     String   @id @default(cuid())
-  tutor  String
-  start  DateTime
-  end    DateTime
-  reason String?
-
-  teacher Teacher @relation(fields: [tutor], references: [id], onDelete: Cascade)
-}
-
-model Category {
-  id    String  @id @default(cuid())
-  slug  String  @unique
-  name  String
-  desc  String? @db.Text
-  icon  String?
-  group String?
-
-  parent   Category?  @relation("Hierarchy", fields: [group], references: [id], onDelete: SetNull)
-  children Category[] @relation("Hierarchy")
-  courses  Course[]
-}
-
-model Tag {
-  id      String   @id @default(cuid())
-  slug    String   @unique
-  name    String   @unique
-  courses Course[]
-}
-
-model Course {
-  id        String    @id @default(cuid())
-  tutor     String
-  group     String?
-  slug      String    @unique
-  code      String    @unique
-  name      String
-  desc      String?   @db.Text
-  thumb     String?
-  banner    String?
-  video     String?
-  level     Level     @default(ALL)
-  lang      String    @default("vi")
-  requires  String[]
-  outcomes  String[]
-  audience  String[]
-  price     Decimal   @default(0.00) @db.Decimal(12, 2)
-  sale      Decimal?  @db.Decimal(12, 2)
-  cert      Boolean   @default(true)
-  serial    Boolean   @default(false)
-  duration  Int       @default(0)
-  lessons   Int       @default(0)
-  students  Int       @default(0)
-  reviews   Int       @default(0)
-  views     Int       @default(0)
-  rating    Decimal   @default(0.00) @db.Decimal(3, 2)
-  status    Status    @default(DRAFT)
-  published DateTime?
-  created   DateTime  @default(now())
-  updated   DateTime  @updatedAt
-  deleted   DateTime?
-
-  teacher  Teacher   @relation(fields: [tutor], references: [id], onDelete: Restrict)
-  category Category? @relation(fields: [group], references: [id], onDelete: SetNull)
-
-  tags      Tag[]
-  coupons   Coupon[]
-  enrolls   Enrollment[]
-  exams     Exam[]
-  chapters  Chapter[]
-  feedbacks Review[]
-  favorites Favorite[]
-  certs     Certificate[]
-  items     Item[]
-  picks     Selection[]
-  faqs      Faq[]
-  notices   Notice[]
-  progress  Progress[]
-  chats     Chat[]
-}
-
-model Faq {
+model Post {
   id       String   @id @default(cuid())
-  core     String
-  question String   @db.Text
-  answer   String   @db.Text
-  order    Int      @default(0)
+  owner    String
+  topic    String
+  title    String
+  content  String   @db.Text
+  level    Level    @default(ALL)
+  grade    Int
+  mode     Mode
+  city     String?
+  district String?
+  ward     String?
+  street   String?
+  lat      Float?
+  lng      Float?
+  price    Decimal  @db.Decimal(12, 2)
+  status   State    @default(OPEN)
   created  DateTime @default(now())
   updated  DateTime @updatedAt
 
-  course Course @relation(fields: [core], references: [id], onDelete: Cascade)
+  tutor   Tutor      @relation(fields: [owner], references: [id], onDelete: Cascade)
+  subject Subject    @relation(fields: [topic], references: [id], onDelete: Restrict)
+  deals   Contract[]
+
+  @@index([topic, status])
+  @@index([city, district])
+  @@index([level, grade])
+  @@index([price])
 }
 
-model Notice {
-  id      String   @id @default(cuid())
-  core    String
-  title   String
-  content String   @db.Text
-  created DateTime @default(now())
-  updated DateTime @updatedAt
-
-  course Course @relation(fields: [core], references: [id], onDelete: Cascade)
-}
-
-model Chapter {
-  id      String    @id @default(cuid())
-  core    String
-  title   String
-  order   Int       @default(0)
-  access  Access    @default(ALL)
-  created DateTime  @default(now())
-  updated DateTime  @updatedAt
-  deleted DateTime?
-
-  course  Course   @relation(fields: [core], references: [id], onDelete: Cascade)
-  lessons Lesson[]
-}
-
-model Lesson {
-  id       String    @id @default(cuid())
-  part     String
-  test     String?   @unique
+model Request {
+  id       String   @id @default(cuid())
+  learner  String
+  topic    String
   title    String
-  type     Format    @default(VIDEO)
-  video    String?
-  asset    Json?     @default("{}")
-  status   Status    @default(PENDING)
-  content  String?   @db.Text
-  duration Int       @default(0)
-  order    Int       @default(0)
-  preview  Boolean   @default(false)
-  created  DateTime  @default(now())
-  updated  DateTime  @updatedAt
-  deleted  DateTime?
+  desc     String   @db.Text
+  level    Level    @default(ALL)
+  grade    Int
+  mode     Mode
+  city     String?
+  district String?
+  ward     String?
+  street   String?
+  lat      Float?
+  lng      Float?
+  budget   Decimal  @db.Decimal(12, 2)
+  count    Int      @default(1)
+  schedule String?
+  status   State    @default(OPEN)
+  created  DateTime @default(now())
+  updated  DateTime @updatedAt
 
-  chapter  Chapter    @relation(fields: [part], references: [id], onDelete: Cascade)
-  exam     Exam?      @relation(fields: [test], references: [id], onDelete: SetNull)
-  progress Progress[]
-  comments Comment[]
-  tasks    Task[]
-  media    Media[]
+  student Student    @relation(fields: [learner], references: [id], onDelete: Cascade)
+  subject Subject    @relation(fields: [topic], references: [id], onDelete: Restrict)
+  bids    Bid[]
+  deal    Contract?
+  marks   Bookmark[]
+
+  @@index([topic, status])
+  @@index([city, district])
+  @@index([level, grade])
+  @@index([budget])
 }
 
-model Media {
-  id        String   @id @default(cuid())
-  unit      String
-  name      String
-  url       String
-  size      Int      @default(0)
-  type      String?
-  downloads Int      @default(0)
-  created   DateTime @default(now())
-
-  lesson Lesson @relation(fields: [unit], references: [id], onDelete: Cascade)
-}
-
-model Comment {
-  id       String    @id @default(cuid())
-  learner  String
-  unit     String
-  node     String?
-  content  String    @db.Text
-  answered Boolean   @default(false)
-  best     Boolean   @default(false)
-  upvotes  Int       @default(0)
-  created  DateTime  @default(now())
-  updated  DateTime  @updatedAt
-  deleted  DateTime?
-
-  student Student   @relation(fields: [learner], references: [id], onDelete: Cascade)
-  lesson  Lesson    @relation(fields: [unit], references: [id], onDelete: Cascade)
-  parent  Comment?  @relation("Tree", fields: [node], references: [id], onDelete: SetNull)
-  replies Comment[] @relation("Tree")
-  votes   Vote[]
-}
-
-model Vote {
+model Bookmark {
   id      String   @id @default(cuid())
-  learner String
-  note    String
-  upvote  Boolean  @default(true)
+  owner   String
+  need    String
   created DateTime @default(now())
 
-  student Student @relation(fields: [learner], references: [id], onDelete: Cascade)
-  comment Comment @relation(fields: [note], references: [id], onDelete: Cascade)
+  tutor   Tutor   @relation(fields: [owner], references: [id], onDelete: Cascade)
+  request Request @relation(fields: [need], references: [id], onDelete: Cascade)
 
-  @@unique([learner, note])
+  @@unique([owner, need])
+  @@index([owner])
 }
 
-model Task {
-  id       String    @id @default(cuid())
-  learner  String
-  unit     String
-  attempt  Int       @default(1)
-  content  String?   @db.Text
-  file     String?
-  github   String?
-  score    Float?
-  feedback String?   @db.Text
-  graded   DateTime?
-  created  DateTime  @default(now())
-  updated  DateTime  @updatedAt
-
-  student Student @relation(fields: [learner], references: [id], onDelete: Cascade)
-  lesson  Lesson  @relation(fields: [unit], references: [id], onDelete: Cascade)
-
-  @@unique([learner, unit, attempt])
-}
-
-model Enrollment {
-  id        String    @id @default(cuid())
-  core      String
-  learner   String
-  status    Status    @default(ACTIVE)
-  progress  Float     @default(0)
-  completed DateTime?
-  expire    DateTime?
-  joined    DateTime  @default(now())
-  updated   DateTime  @updatedAt
-
-  course  Course  @relation(fields: [core], references: [id], onDelete: Cascade)
-  student Student @relation(fields: [learner], references: [id], onDelete: Cascade)
-
-  @@unique([core, learner])
-}
-
-model Progress {
+model Bid {
   id      String   @id @default(cuid())
-  learner String
-  core    String
-  unit    String
-  done    Boolean  @default(false)
-  watched Int      @default(0)
+  need    String
+  owner   String
+  price   Decimal  @db.Decimal(12, 2)
+  cover   String   @db.Text
+  status  State    @default(PENDING)
+  created DateTime @default(now())
   updated DateTime @updatedAt
 
-  student Student @relation(fields: [learner], references: [id], onDelete: Cascade)
-  course  Course  @relation(fields: [core], references: [id], onDelete: Cascade)
-  lesson  Lesson  @relation(fields: [unit], references: [id], onDelete: Cascade)
+  request Request @relation(fields: [need], references: [id], onDelete: Cascade)
+  tutor   Tutor   @relation(fields: [owner], references: [id], onDelete: Cascade)
 
-  @@unique([learner, unit])
+  @@unique([need, owner])
+  @@index([status])
 }
 
-model Favorite {
+model Contract {
   id      String   @id @default(cuid())
+  code    String   @unique
   learner String
-  core    String
+  tutor   String
+  need    String?  @unique
+  post    String?
+  title   String
+  total   Decimal  @db.Decimal(12, 2)
+  fee     Decimal  @db.Decimal(12, 2)
+  income  Decimal  @db.Decimal(12, 2)
+  count   Int
+  status  State    @default(PENDING)
+  escrow  State    @default(HOLD)
+  reason  String?  @db.Text
+  created DateTime @default(now())
+  updated DateTime @updatedAt
+
+  student Student  @relation(fields: [learner], references: [id], onDelete: Restrict)
+  teacher Tutor    @relation(fields: [tutor], references: [id], onDelete: Restrict)
+  request Request? @relation(fields: [need], references: [id], onDelete: SetNull)
+  class   Post?    @relation(fields: [post], references: [id], onDelete: SetNull)
+
+  items   Session[]
+  bills   Payment[]
+  reviews Review[]
+  clashes Dispute[]
+
+  @@index([status, escrow])
+  @@index([learner, tutor])
+  @@index([created])
+}
+
+model Session {
+  id       String    @id @default(cuid())
+  deal     String
+  title    String
+  start    DateTime
+  end      DateTime
+  status   State     @default(PENDING)
+  summary  String?   @db.Text
+  feedback String?   @db.Text
+  verify   DateTime?
+  created  DateTime  @default(now())
+  updated  DateTime  @updatedAt
+
+  contract Contract @relation(fields: [deal], references: [id], onDelete: Cascade)
+  reports  Report[]
+
+  @@index([deal, status])
+}
+
+model Dispute {
+  id      String   @id @default(cuid())
+  deal    String
+  creator String
+  reason  String   @db.Text
+  proof   String?
+  status  State    @default(OPEN)
+  note    String?  @db.Text
+  created DateTime @default(now())
+  updated DateTime @updatedAt
+
+  contract Contract @relation(fields: [deal], references: [id], onDelete: Cascade)
+
+  @@index([status])
+}
+
+model Payment {
+  id      String   @id @default(cuid())
+  code    String   @unique
+  owner   String
+  deal    String?
+  vault   String?
+  type    Type
+  phase   Phase?
+  amount  Decimal  @db.Decimal(12, 2)
+  desc    String
+  status  State    @default(PENDING)
+  gateway String?
+  ref     String?
   created DateTime @default(now())
 
-  student Student @relation(fields: [learner], references: [id], onDelete: Cascade)
-  course  Course  @relation(fields: [core], references: [id], onDelete: Cascade)
+  user     User      @relation(fields: [owner], references: [id], onDelete: Restrict)
+  contract Contract? @relation(fields: [deal], references: [id], onDelete: SetNull)
+  bank     Bank?     @relation(fields: [vault], references: [id], onDelete: SetNull)
 
-  @@unique([learner, core])
+  @@index([owner, status])
+  @@index([type, phase])
+  @@index([created])
+}
+
+model Schedule {
+  id     String  @id @default(cuid())
+  owner  String
+  day    Int
+  start  String
+  end    String
+  active Boolean @default(true)
+
+  tutor Tutor @relation(fields: [owner], references: [id], onDelete: Cascade)
+
+  @@index([owner, day, active])
+}
+
+model Review {
+  id      String   @id @default(cuid())
+  learner String
+  tutor   String
+  deal    String   @unique
+  rating  Int      @default(5)
+  content String?  @db.Text
+  reply   String?  @db.Text
+  created DateTime @default(now())
+
+  student  Student  @relation(fields: [learner], references: [id], onDelete: Cascade)
+  teacher  Tutor    @relation(fields: [tutor], references: [id], onDelete: Cascade)
+  contract Contract @relation(fields: [deal], references: [id], onDelete: Cascade)
+
+  @@index([tutor, rating])
 }
 
 model Follow {
@@ -506,238 +462,42 @@ model Follow {
   created DateTime @default(now())
 
   student Student @relation(fields: [learner], references: [id], onDelete: Cascade)
-  teacher Teacher @relation(fields: [tutor], references: [id], onDelete: Cascade)
+  teacher Tutor   @relation(fields: [tutor], references: [id], onDelete: Cascade)
 
   @@unique([learner, tutor])
-}
-
-model Certificate {
-  id      String   @id @default(cuid())
-  code    String   @unique
-  learner String
-  core    String
-  holder  String
-  course  String
-  url     String?
-  issued  DateTime @default(now())
-
-  student   Student @relation(fields: [learner], references: [id], onDelete: Cascade)
-  courseRef Course  @relation(fields: [core], references: [id], onDelete: Cascade)
-
-  @@unique([learner, core])
-}
-
-model Review {
-  id      String   @id @default(cuid())
-  learner String
-  core    String?
-  tutor   String?
-  slot    String?  @unique
-  rating  Int      @default(5)
-  content String?  @db.Text
-  reply   String?  @db.Text
-  created DateTime @default(now())
-  updated DateTime @updatedAt
-
-  student Student  @relation(fields: [learner], references: [id], onDelete: Cascade)
-  course  Course?  @relation(fields: [core], references: [id], onDelete: Cascade)
-  teacher Teacher? @relation("TeacherReviews", fields: [tutor], references: [id], onDelete: Cascade)
-  booking Booking? @relation(fields: [slot], references: [id], onDelete: Cascade)
-}
-
-model Cart {
-  id      String   @id @default(cuid())
-  learner String   @unique
-  created DateTime @default(now())
-  updated DateTime @updatedAt
-
-  student Student     @relation(fields: [learner], references: [id], onDelete: Cascade)
-  picks   Selection[]
-}
-
-model Selection {
-  id      String   @id @default(cuid())
-  cart    String
-  core    String
-  created DateTime @default(now())
-
-  basket Cart   @relation(fields: [cart], references: [id], onDelete: Cascade)
-  course Course @relation(fields: [core], references: [id], onDelete: Cascade)
-
-  @@unique([cart, core])
-}
-
-model Coupon {
-  id       String   @id @default(cuid())
-  tutor    String?
-  code     String   @unique
-  method   Method   @default(PERCENTAGE)
-  value    Decimal  @db.Decimal(12, 2)
-  minimum  Decimal? @db.Decimal(12, 2)
-  maximum  Decimal? @db.Decimal(12, 2)
-  limit    Int?
-  capacity Int?     @default(1)
-  used     Int      @default(0)
-  active   Boolean  @default(true)
-  start    DateTime
-  end      DateTime
-  created  DateTime @default(now())
-  updated  DateTime @updatedAt
-
-  teacher Teacher? @relation(fields: [tutor], references: [id], onDelete: Cascade)
-  courses Course[]
-  orders  Order[]
-  usages  Usage[]
-}
-
-model Usage {
-  id    String   @id @default(cuid())
-  owner String
-  card  String
-  bill  String
-  used  DateTime @default(now())
-
-  user   User   @relation(fields: [owner], references: [id], onDelete: Restrict)
-  coupon Coupon @relation(fields: [card], references: [id], onDelete: Cascade)
-  order  Order  @relation(fields: [bill], references: [id], onDelete: Cascade)
-
-  @@unique([owner, card, bill])
-}
-
-model Order {
-  id       String   @id @default(cuid())
-  owner    String
-  card     String?
-  code     String   @unique
-  type     Type     @default(PURCHASE)
-  amount   Decimal  @db.Decimal(12, 2)
-  discount Decimal  @default(0.00) @db.Decimal(12, 2)
-  final    Decimal  @db.Decimal(12, 2)
-  status   Status   @default(PENDING)
-  gateway  String   @default("VNPAY")
-  txn      String?
-  hash     String?  @unique
-  created  DateTime @default(now())
-  updated  DateTime @updatedAt
-
-  user   User     @relation(fields: [owner], references: [id], onDelete: Restrict)
-  coupon Coupon?  @relation(fields: [card], references: [id], onDelete: SetNull)
-  items  Item[]
-  down   Booking? @relation("DownOrder")
-  tail   Booking? @relation("TailOrder")
-  usages Usage[]
-}
-
-model Item {
-  id      String   @id @default(cuid())
-  bill    String
-  core    String
-  price   Decimal  @db.Decimal(12, 2)
-  name    String
-  income  Decimal  @default(0.00) @db.Decimal(12, 2)
-  fee     Decimal  @default(0.00) @db.Decimal(12, 2)
-  paid    Boolean  @default(false)
-  created DateTime @default(now())
-
-  order  Order  @relation(fields: [bill], references: [id], onDelete: Cascade)
-  course Course @relation(fields: [core], references: [id], onDelete: Restrict)
-
-  @@unique([bill, core])
-}
-
-model Post {
-  id      String   @id @default(cuid())
-  tutor   String
-  title   String
-  content String   @db.Text
-  type    String
-  subject String
-  budget  Decimal  @db.Decimal(12, 2)
-  created DateTime @default(now())
-  updated DateTime @updatedAt
-
-  teacher Teacher @relation(fields: [tutor], references: [id], onDelete: Cascade)
-  bids    Bid[]
-}
-
-model Bid {
-  id      String   @id @default(cuid())
-  job     String
-  tutor   String
-  cover   String   @db.Text
-  rate    Decimal  @db.Decimal(12, 2)
-  status  Status   @default(PENDING)
-  created DateTime @default(now())
-
-  post    Post    @relation(fields: [job], references: [id], onDelete: Cascade)
-  teacher Teacher @relation(fields: [tutor], references: [id], onDelete: Cascade)
-
-  @@unique([job, tutor])
-}
-
-model Booking {
-  id         String    @id @default(cuid())
-  tutor      String
-  learner    String
-  downId     String?   @unique
-  tailId     String?   @unique
-  start      DateTime?
-  end        DateTime?
-  schedule   String?
-  online     Boolean   @default(true)
-  meet       String?
-  status     Status    @default(PENDING)
-  total      Decimal   @db.Decimal(12, 2)
-  fee        Decimal   @db.Decimal(12, 2)
-  income     Decimal   @db.Decimal(12, 2)
-  deposit    Boolean   @default(false)
-  final      Boolean   @default(false)
-  paid       Boolean   @default(false)
-  canceller  String?
-  reason     String?   @db.Text
-  reschedule Json?     @default("[]")
-  created    DateTime  @default(now())
-  updated    DateTime  @updatedAt
-
-  teacher Teacher @relation("TeacherBookings", fields: [tutor], references: [id], onDelete: Cascade)
-  student Student @relation("StudentBookings", fields: [learner], references: [id], onDelete: Cascade)
-  down    Order?  @relation("DownOrder", fields: [downId], references: [id], onDelete: SetNull)
-  tail    Order?  @relation("TailOrder", fields: [tailId], references: [id], onDelete: SetNull)
-  review  Review?
-  report  Report?
+  @@index([learner])
 }
 
 model Chat {
   id      String    @id @default(cuid())
-  type    ChatType  @default(DIRECT)
-  user1   String
-  user2   String
-  core    String?
+  first   String
+  second  String
   read1   DateTime?
   read2   DateTime?
   created DateTime  @default(now())
   updated DateTime  @updatedAt
 
-  first    User      @relation("UserOne", fields: [user1], references: [id], onDelete: Cascade)
-  second   User      @relation("UserTwo", fields: [user2], references: [id], onDelete: Cascade)
-  course   Course?   @relation(fields: [core], references: [id], onDelete: SetNull)
+  user1    User      @relation("One", fields: [first], references: [id], onDelete: Cascade)
+  user2    User      @relation("Two", fields: [second], references: [id], onDelete: Cascade)
   messages Message[]
 
-  @@unique([user1, user2, core])
+  @@unique([first, second])
 }
 
 model Message {
-  id      String      @id @default(cuid())
+  id      String   @id @default(cuid())
   room    String
   sender  String
-  type    MessageType @default(TEXT)
-  content String?     @db.Text
-  attach  String?     @unique
-  created DateTime    @default(now())
+  kind    Kind     @default(TEXT)
+  content String?  @db.Text
+  attach  String?  @unique
+  created DateTime @default(now())
 
   chat       Chat        @relation(fields: [room], references: [id], onDelete: Cascade)
   user       User        @relation(fields: [sender], references: [id], onDelete: Cascade)
   attachment Attachment? @relation(fields: [attach], references: [id], onDelete: SetNull)
+
+  @@index([room, created])
 }
 
 model Attachment {
@@ -751,153 +511,40 @@ model Attachment {
 
   user    User     @relation(fields: [owner], references: [id], onDelete: Cascade)
   message Message?
+
+  @@index([owner])
 }
 
 model Report {
-  id       String   @id @default(cuid())
-  creator  String
-  target   String
-  slot     String?  @unique
-  reason   String   @db.Text
-  evidence String?
-  status   Status   @default(PENDING)
-  created  DateTime @default(now())
-  updated  DateTime @updatedAt
+  id      String   @id @default(cuid())
+  creator String
+  target  String
+  item    String?
+  reason  String   @db.Text
+  proof   String?
+  status  State    @default(PENDING)
+  created DateTime @default(now())
 
   author  User     @relation("Creator", fields: [creator], references: [id], onDelete: Cascade)
   victim  User     @relation("Target", fields: [target], references: [id], onDelete: Cascade)
-  booking Booking? @relation(fields: [slot], references: [id], onDelete: Cascade)
+  session Session? @relation(fields: [item], references: [id], onDelete: SetNull)
+
+  @@index([status])
 }
 
-model Bank {
-  id      String    @id @default(cuid())
-  tutor   String
-  name    String
-  subject String
-  desc    String?   @db.Text
-  public  Boolean   @default(false)
-  created DateTime  @default(now())
-  updated DateTime  @updatedAt
-  deleted DateTime?
-
-  teacher   Teacher    @relation(fields: [tutor], references: [id], onDelete: Cascade)
-  questions Question[]
-}
-
-model Question {
-  id       String    @id @default(cuid())
-  vault    String
-  content  String    @db.Text
-  type     String    @default("MCQ")
-  level    String    @default("MEDIUM")
-  topic    String?
-  options  Json?
-  solution Json?
-  points   Float     @default(1.0)
-  active   Boolean   @default(true)
-  created  DateTime  @default(now())
-  updated  DateTime  @updatedAt
-  deleted  DateTime?
-
-  bank  Bank   @relation(fields: [vault], references: [id], onDelete: Cascade)
-  tests Test[]
-}
-
-model Exam {
-  id        String    @id @default(cuid())
-  tutor     String
-  core      String?
-  title     String
-  desc      String?   @db.Text
-  duration  Int
-  threshold Float     @default(5.0)
-  config    Json      @default("{}")
-  status    String    @default("DRAFT")
-  start     DateTime?
-  end       DateTime?
-  created   DateTime  @default(now())
-  updated   DateTime  @updatedAt
-  deleted   DateTime?
-
-  teacher Teacher      @relation(fields: [tutor], references: [id], onDelete: Cascade)
-  course  Course?      @relation(fields: [core], references: [id], onDelete: SetNull)
-  lesson  Lesson?
-  subs    Submission[]
-  tests   Test[]
-}
-
-model Test {
-  id     String @id @default(cuid())
-  test   String
-  quiz   String
-  order  Int    @default(0)
-  points Float  @default(1.0)
-
-  exam     Exam     @relation(fields: [test], references: [id], onDelete: Cascade)
-  question Question @relation(fields: [quiz], references: [id], onDelete: Cascade)
-
-  @@unique([test, quiz])
-}
-
-model Submission {
-  id       String    @id @default(cuid())
-  test     String
-  learner  String
-  attempt  Int       @default(1)
-  start    DateTime  @default(now())
-  submit   DateTime?
-  elapsed  Int       @default(0)
-  cheats   Int       @default(0)
-  logs     Json?     @default("[]")
-  answers  Json?     @default("[]")
-  score    Float     @default(0)
-  max      Float     @default(10.0)
-  passed   Boolean   @default(false)
-  feedback String?   @db.Text
-  graded   DateTime?
-  status   Status    @default(PENDING)
-  created  DateTime  @default(now())
-  updated  DateTime  @updatedAt
-
-  exam    Exam    @relation(fields: [test], references: [id], onDelete: Cascade)
-  student Student @relation(fields: [learner], references: [id], onDelete: Cascade)
-
-  @@unique([test, learner, attempt])
-}
-
-model Plan {
-  id        String    @id @default(cuid())
-  learner   String
-  title     String
-  subject   String?
-  content   Json
-  status    Status    @default(ACTIVE)
-  completed DateTime?
-  created   DateTime  @default(now())
-  updated   DateTime  @updatedAt
-
-  student Student @relation(fields: [learner], references: [id], onDelete: Cascade)
-}
-
-model Notification {
-  id        String    @id @default(cuid())
-  owner     String
-  type      String
-  title     String
-  content   String    @db.Text
-  sourceId  String?
-  alias     String?
-  groupKey  String?
-  actorId   String?
-  actorName String?
-  read      Boolean   @default(false)
-  opened    DateTime?
-  created   DateTime  @default(now())
+model Notice {
+  id      String   @id @default(cuid())
+  owner   String
+  title   String
+  content String   @db.Text
+  link    String?
+  read    Boolean  @default(false)
+  created DateTime @default(now())
 
   user User @relation(fields: [owner], references: [id], onDelete: Cascade)
 
+  @@index([owner, read])
   @@index([owner, created])
-  @@index([owner, groupKey])
 }
 
 model Audit {
@@ -912,4 +559,7 @@ model Audit {
   created DateTime @default(now())
 
   user User @relation(fields: [actor], references: [id], onDelete: Cascade)
+
+  @@index([entity, target])
+  @@index([created])
 }

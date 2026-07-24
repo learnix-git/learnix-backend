@@ -16,83 +16,132 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET!,
 });
 
-const FOLDER = 'Home/Learnix/Chat';
+const FOLDER = 'Learnix/Chat';
 
 type Payload =
   | { type: 'text'; content: string }
   | { type: 'image' | 'file'; attachmentId: string; content?: string };
 
 export class ChatService {
-  // ! Kiểm tra user có phải thành viên cuộc trò chuyện không
-  static async check_role(conversationId: string, userId: string) {
-    const chat = await prisma.chat.findUnique({ where: { id: conversationId } });
+  // Hàm kiểm tra quyền truy cập
+  static async check_role(
+    conversationId: string,
+    userId: string
+  ) {
+    // Lấy ID cuộc trò chuyện
+    const chat = await prisma.chat.findUnique({
+      where: {
+        id: conversationId,
+      },
+    });
 
+    // Kiểm tra cuộc trò chuyện có tồn tại không
     if (!chat) {
       throw new Error("Cuộc trò chuyện không tồn tại!");
     }
-    if (chat.user1 !== userId && chat.user2 !== userId) {
+
+    // Kiểm tra quyền truy cập của hai người dùng
+    if (
+      chat.first !== userId &&
+      chat.second !== userId
+    ) {
       throw new Error("Bạn không có quyền truy cập cuộc trò chuyện này!");
     }
+
     return chat;
   }
 
-  // ! Chuẩn hóa User -> ChatUser
-  private static map_user(user: { id: string; name: string; avatar: string | null; role: string }) {
-    return { id: user.id, name: user.name, avatar: user.avatar, alias: null, role: user.role };
-  }
+  // Hàm lấy bản xem trước trong danh sách tin nhắn
+  private static get_preview(
+    kind: string,
+    content: string | null
+  ) {
+    // Nếu là chữ hoặc hệ thống thì hiển thị nội dung
+    if (
+      kind === "TEXT" ||
+      kind === "SYSTEM"
+    ) {
+      return content || "";
+    }
 
-  // ! Chuẩn hóa Attachment -> ChatAttachment
-  private static map_attachment(att: { id: string; name: string; mime: string; size: number; url: string } | null) {
-    if (!att) return null;
-    return { id: att.id, originalName: att.name, mimeType: att.mime, sizeBytes: att.size, url: att.url };
-  }
+    // Nếu là hình ảnh thì hiển thị hình ảnh
+    if (kind === "IMAGE") {
+      return "Hình ảnh";
+    }
 
-  // ! Chuẩn hóa Message -> ChatMessage
-  private static map_message(msg: any) {
-    return {
-      id: msg.id,
-      conversationId: msg.room,
-      sender: this.map_user(msg.user),
-      type: msg.type.toLowerCase(),
-      content: msg.content,
-      attachment: this.map_attachment(msg.attachment),
-      createdAt: msg.created.toISOString(),
-    };
-  }
-
-  // ! Preview cho danh sách hội thoại
-  private static get_preview(type: string, content: string | null) {
-    if (type === "TEXT" || type === "SYSTEM") return content || "";
-    if (type === "IMAGE") return "Hình ảnh";
+    // Nếu không thuộc các loại trên thì hiển thị tệp đính kèm
     return "Tệp đính kèm";
   }
 
-  // ! Danh sách cuộc trò chuyện của user
-  static async get_conversations(userId: string, type?: "direct" | "course") {
+  // Hàm lấy danh sách cuộc trò chuyện
+  static async get_conversations(userId: string) {
+    // Lấy tất cả cuộc trò chuyện
     const chats = await prisma.chat.findMany({
+      // Điều kiện người dùng phải là một trong hai người của cuộc trò chuyện
       where: {
-        OR: [{ user1: userId }, { user2: userId }],
-        ...(type ? { type: type.toUpperCase() as any } : {}),
+        OR: [
+          {
+            first: userId,
+          },
+          {
+            second: userId,
+          },
+        ],
       },
       include: {
-        first: { select: { id: true, name: true, avatar: true, role: true } },
-        second: { select: { id: true, name: true, avatar: true, role: true } },
-        course: { select: { id: true, code: true, name: true, slug: true, thumb: true, price: true } },
-        messages: { orderBy: { created: "desc" }, take: 1 },
+        // Lấy thông tin người thứ nhất
+        user1: {
+          select: {
+            id: true,
+            name: true,
+            avatar: true,
+            role: true,
+          },
+        },
+        // Lấy thông tin người thứ hai
+        user2: {
+          select: {
+            id: true,
+            name: true,
+            avatar: true,
+            role: true,
+          },
+        },
+        // Lấy tin nhắn mới nhất để xem trước
+        messages: {
+          orderBy: {
+            created: "desc",
+          },
+          take: 1,
+        },
       },
-      orderBy: { updated: "desc" },
+      // Sắp xếp danh sách cuộc trò chuyện theo thời gian giảm dần
+      orderBy: {
+        updated: "desc",
+      },
     });
 
     return Promise.all(
       chats.map(async (chat) => {
-        const peerUser = chat.user1 === userId ? chat.second : chat.first;
-        const readAt = chat.user1 === userId ? chat.read1 : chat.read2;
+        const peer = chat.first === userId ? chat.user2 : chat.user1;
+        const readAt = chat.first === userId ? chat.read1 : chat.read2;
 
+        // Đếm số tin nhắn chưa đọc
         const unreadCount = await prisma.message.count({
+          // Điều kiện chỉ đếm số tin nhắn trong một cuộc trò chuyện
           where: {
             room: chat.id,
-            sender: { not: userId },
-            ...(readAt ? { created: { gt: readAt } } : {}),
+            // Không tính do người dùng gửi
+            sender: {
+              not: userId,
+            },
+            ...(readAt
+              ? {
+                  created: {
+                    gt: readAt,
+                  },
+                }
+              : {}),
           },
         });
 
@@ -100,55 +149,84 @@ export class ChatService {
 
         return {
           id: chat.id,
-          type: chat.type.toLowerCase(),
-          course: chat.course
-            ? {
-                id: chat.course.id,
-                code: chat.course.code,
-                name: chat.course.name,
-                slug: chat.course.slug,
-                grade: null,
-                thumbnail: chat.course.thumb,
-                price: chat.course.price ? Number(chat.course.price) : null,
-              }
-            : null,
-          peer: this.map_user(peerUser),
-          lastMessageAt: last ? last.created.toISOString() : null,
-          lastMessagePreview: last ? this.get_preview(last.type, last.content) : null,
+          peer,
+          lastMessageAt: last?.created ?? null,
+          lastMessagePreview: last ? this.get_preview(last.kind, last.content) : null,
           unreadCount,
         };
       })
     );
   }
 
-  // ! Lấy tin nhắn phân trang
-  static async get_messages(conversationId: string, userId: string, page: number, size: number) {
+  // Hàm lấy danh sách tin nhắn trong một cuộc trò chuyện
+  static async get_messages(
+    conversationId: string,
+    userId: string,
+    page: number,
+    size: number
+  ) {
+    // Kiểm tra quyền truy cập
     await this.check_role(conversationId, userId);
 
+    // Đếm và lấy tin nhắn song song
     const [total, rows] = await Promise.all([
-      prisma.message.count({ where: { room: conversationId } }),
+      // Đếm số lượng tin nhắn
+      prisma.message.count({
+        where: {
+          room: conversationId,
+        },
+      }),
+      // Lấy danh sách tin nhắn
       prisma.message.findMany({
-        where: { room: conversationId },
+        where: {
+          room: conversationId,
+        },
         include: {
-          user: { select: { id: true, name: true, avatar: true, role: true } },
+          user: {
+            select: {
+              id: true,
+              name: true,
+              avatar: true,
+              role: true,
+            },
+          },
           attachment: true,
         },
-        orderBy: { created: "desc" },
+        orderBy: {
+          created: "desc",
+        },
         skip: (page - 1) * size,
         take: size,
       }),
     ]);
 
-    return { items: rows.reverse().map((m) => this.map_message(m)), total };
+    return {
+      items: rows.reverse(),
+      total,
+    };
   }
 
-  // ! Tạo tin nhắn — dùng chung cho REST và socket
-  static async post_message(conversationId: string, senderId: string, payload: Payload) {
-    const [chat, sender] = await Promise.all([
+  // Hàm gửi tin nhắn
+  static async post_message(
+    conversationId: string,
+    senderId: string,
+    payload: Payload
+  ) {
+    // Kiểm tra quyền truy cập và lấy thông tin người dùng
+    const [, sender] = await Promise.all([
+      // Kiểm tra quyền truy cập
       this.check_role(conversationId, senderId),
+      // Lấy thông tin người dùng
       prisma.user.findUnique({
-        where: { id: senderId },
-        select: { id: true, name: true, avatar: true, role: true },
+        where: {
+          id: senderId,
+        },
+        select: {
+          id: true,
+          name: true,
+          avatar: true,
+          role: true,
+        },
       }),
     ]);
 
@@ -156,102 +234,218 @@ export class ChatService {
       throw new Error("Người dùng không tồn tại!");
     }
 
-    let attachmentRecord: { id: string; name: string; mime: string; size: number; url: string } | null = null;
+    // Khởi tạo tệp đính kèm
+    let record: {
+      id: string;
+      name: string;
+      mime: string;
+      size: number;
+      url: string;
+    } | null = null;
 
+    // Nếu không phải văn bản thì kiểm tra tệp đính kèm
+    // - Kiểm tra sự tồn tại
+    // - Kiểm tra quyền truy cập
+    // - Kiểm tra đã được sử dụng
     if (payload.type !== "text") {
-      const attachment = await prisma.attachment.findUnique({ where: { id: payload.attachmentId } });
+      // Lấy thông tin tệp
+      const attachment = await prisma.attachment.findUnique({
+        where: {
+          id: payload.attachmentId,
+        },
+      });
+
       if (!attachment) {
         throw new Error("Tệp đính kèm không tồn tại!");
       }
+
       if (attachment.owner !== senderId) {
         throw new Error("Bạn không có quyền dùng tệp đính kèm này!");
       }
 
-      const used = await prisma.message.findUnique({ where: { attach: attachment.id } });
+      const used = await prisma.message.findUnique({
+        where: {
+          attach: attachment.id,
+        },
+      });
+
       if (used) {
-        throw new Error("Tệp đính kèm đã được sử dụng cho tin nhắn khác!");
+        throw new Error("Tệp đính kèm đã được sử dụng!");
       }
 
-      attachmentRecord = attachment;
+      record = attachment;
     }
 
+    // Tạo tin nhắn
     const message = await prisma.message.create({
       data: {
         room: conversationId,
         sender: senderId,
-        type: payload.type.toUpperCase() as any,
+        kind: payload.type.toUpperCase() as any,
         content: payload.type === "text" ? payload.content : (payload.content ?? null),
-        attach: attachmentRecord?.id ?? null,
+        attach: record?.id ?? null,
       },
     });
 
-    prisma.chat.update({ where: { id: conversationId }, data: { updated: new Date() } })
-      .catch((err) => console.error("[chat] update chat.updated thất bại:", err));
+    // Cập nhật cuộc trò chuyện
+    prisma.chat
+      .update({
+        where: {
+          id: conversationId,
+        },
+        data: {
+          updated: new Date(),
+        },
+      })
+      .catch((err) => {
+        console.error(err);
+      });
 
-    return this.map_message({
+    return {
       ...message,
       user: sender,
-      attachment: attachmentRecord,
-    });
+      attachment: record,
+    };
   }
 
-  // ! Đánh dấu đã đọc — lưu mốc thời gian
-  static async mark_as_read(conversationId: string, readerId: string, messageId: string) {
+  // Hàm đánh dấu đã đọc
+  static async mark_as_read(
+    conversationId: string,
+    readerId: string,
+    messageId: string
+  ) {
+    // Kiểm tra quyền truy cập
     const chat = await this.check_role(conversationId, readerId);
 
-    const message = await prisma.message.findUnique({ where: { id: messageId } });
-    if (!message || message.room !== conversationId) {
+    // Tìm kiếm tin nhắn
+    const message = await prisma.message.findUnique({
+      where: {
+        id: messageId,
+      },
+    });
+
+    // Kiểm tra tin nhắn hợp lệ
+    if (
+      !message ||
+      message.room !== conversationId
+    ) {
       throw new Error("Tin nhắn không tồn tại trong cuộc trò chuyện này!");
     }
 
-    const field = chat.user1 === readerId ? "read1" : "read2";
+    // Xác định người đọc và cập nhập trạng thái
+    const field = chat.first === readerId ? "read1" : "read2";
+
     await prisma.chat.update({
-      where: { id: conversationId },
-      data: { [field]: message.created },
+      where: {
+        id: conversationId,
+      },
+      data: {
+        [field]: message.created,
+      },
     });
   }
 
-  // ! Đếm tổng số tin nhắn chưa đọc, gộp theo từng cuộc trò chuyện
+  // Hàm đếm tin nhắn chưa đọc
   static async count_unread(userId: string) {
+    // Lấy tất cả cuộc trò chuyện
     const chats = await prisma.chat.findMany({
-      where: { OR: [{ user1: userId }, { user2: userId }] },
+      where: {
+        OR: [
+          {
+            first: userId,
+          },
+          {
+            second: userId,
+          },
+        ],
+      },
     });
 
+    const results = await Promise.all(
+      chats.map(async (chat) => {
+        // Xác định thời điểm đọc
+        const readAt = chat.first === userId ? chat.read1 : chat.read2;
+
+        const [count, last] = await Promise.all([
+          // Đếm tin nhắn chưa đọc
+          prisma.message.count({
+            where: {
+              room: chat.id,
+              sender: {
+                not: userId,
+              },
+              ...(readAt
+                ? {
+                    created: {
+                      gt: readAt,
+                    },
+                  }
+                : {}),
+            },
+          }),
+          // Lấy tin nhắn cuối cùng
+          prisma.message.findFirst({
+            where: {
+              room: chat.id,
+            },
+            orderBy: {
+              created: "desc",
+            },
+          }),
+        ]);
+
+        return {
+          chat,
+          count,
+          last,
+        };
+      })
+    );
+
+    // Tổng tin nhắn chưa đọc
     let total = 0;
-    const items: { conversationId: string; count: number; latestAt: string }[] = [];
+    // Danh sách các cuộc trò chuyện chưa đọc
+    const items: {
+      conversationId: string;
+      count: number;
+      latestAt: Date;
+    }[] = [];
 
-    for (const chat of chats) {
-      const readAt = chat.user1 === userId ? chat.read1 : chat.read2;
-
-      const [count, last] = await Promise.all([
-        prisma.message.count({
-          where: {
-            room: chat.id,
-            sender: { not: userId },
-            ...(readAt ? { created: { gt: readAt } } : {}),
-          },
-        }),
-        prisma.message.findFirst({ where: { room: chat.id }, orderBy: { created: "desc" } }),
-      ]);
-
-      if (count > 0 && last) {
-        items.push({ conversationId: chat.id, count, latestAt: last.created.toISOString() });
-        total += count;
+    for (const res of results) {
+      if (
+        res.count > 0 &&
+        res.last
+      ) {
+        items.push({
+          conversationId: res.chat.id,
+          count: res.count,
+          latestAt: res.last.created,
+        });
+        total += res.count;
       }
     }
 
-    return { total, items };
+    return {
+      total,
+      items,
+    };
   }
 
-  // ! Upload file lên Cloudinary + tạo Attachment record (chưa gắn message)
+  // Hàm đăng tải tệp đính kèm
   static async upload_attachment(
     ownerId: string,
-    file: { buffer: Buffer; originalname: string; mimetype: string; size: number }
+    file: {
+      buffer: Buffer;
+      originalname: string;
+      mimetype: string;
+      size: number;
+    }
   ) {
-    const t0 = Date.now();
+    // Kiểm tra có phải ảnh không
     const isImage = file.mimetype.startsWith("image/");
 
     const result = await new Promise<UploadApiResponse>((resolve, reject) => {
+      // Đăng tải lên Cloudinary
       const stream = cloudinary.uploader.upload_stream(
         {
           folder: FOLDER,
@@ -262,14 +456,14 @@ export class ChatService {
         },
         (error, uploaded) => {
           if (error || !uploaded) {
-            return reject(error || new Error("Upload Cloudinary thất bại!"));
+            return reject(error || new Error("Đăng tải tệp thất bại!"));
           }
           resolve(uploaded);
         }
       );
       stream.end(file.buffer);
     });
-console.log("[perf] cloudinary upload:", Date.now() - t0, "ms", "size:", file.size);
+
     const attachment = await prisma.attachment.create({
       data: {
         owner: ownerId,
@@ -279,74 +473,61 @@ console.log("[perf] cloudinary upload:", Date.now() - t0, "ms", "size:", file.si
         url: result.secure_url,
       },
     });
-  console.log("[perf] attachment.create:", Date.now() - t0, "ms");
 
-    return {
-      attachmentId: attachment.id,
-      originalName: attachment.name,
-      fileName: attachment.id,
-      mimeType: attachment.mime,
-      sizeBytes: attachment.size,
-      url: attachment.url,
-    };
+    return attachment;
   }
 
-  // ! Tạo hoặc lấy lại conversation giữa 2 người
-  static async upsert_conversation(userId: string, peerId: string, courseId?: string) {
+  // Hàm tạo cuộc trò chuyện
+  static async upsert_conversation(
+    userId: string,
+    peerId: string
+  ) {
+    // Không cho trò chuyện với chính mình
     if (peerId === userId) {
       throw new Error("Không thể tạo cuộc trò chuyện với chính mình!");
     }
 
+    // Kiểm tra thông tin đối phương
     const peer = await prisma.user.findUnique({
-      where: { id: peerId },
-      select: { id: true, name: true, avatar: true, role: true },
+      where: {
+        id: peerId,
+      },
+      select: {
+        id: true,
+        name: true,
+        avatar: true,
+        role: true,
+      },
     });
+
     if (!peer) {
       throw new Error("Người dùng không tồn tại!");
     }
 
-    if (courseId) {
-      const course = await prisma.course.findUnique({ where: { id: courseId } });
-      if (!course) {
-        throw new Error("Khóa học không tồn tại!");
-      }
-    }
+    // Sắp xếp ID để không trùng cuộc trò chuyện
+    const [first, second] = [userId, peerId].sort() as [string, string];
 
-    const [user1, user2] = [userId, peerId].sort() as [string, string];
-    
-    const courseSelect = {
-      id: true, code: true, name: true, slug: true, thumb: true, price: true,
-    } as const;
-
+    // Tìm cuộc trò chuyện
     let chat = await prisma.chat.findFirst({
-      where: { user1, user2, core: courseId ?? null },
-      include: { course: { select: courseSelect } },
+      where: {
+        first,
+        second,
+      },
     });
 
+    // Nếu không có thì tạo mới
     if (!chat) {
       chat = await prisma.chat.create({
-        data: { user1, user2, core: courseId ?? null, type: (courseId ? "COURSE" : "DIRECT") as any },
-        include: { course: { select: courseSelect } },
+        data: {
+          first,
+          second,
+        },
       });
     }
 
-    const chatData = chat as any;
-
     return {
-      id: chatData.id,
-      type: chatData.type,
-      course: chatData.course
-        ? {
-            id: chatData.course.id,
-            code: chatData.course.code,
-            name: chatData.course.name,
-            slug: chatData.course.slug,
-            grade: null,
-            thumbnail: chatData.course.thumb,
-            price: chatData.course.price ? Number(chatData.course.price) : null,
-          }
-        : null,
-      peer: this.map_user(peer),
+      ...chat,
+      peer,
       lastMessageAt: null,
       lastMessagePreview: null,
       unreadCount: 0,

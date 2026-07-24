@@ -4,8 +4,11 @@ import { ChatController } from '../controllers/chat-controllers';
 import { compel } from '../middlewares/auth-middlewares';
 
 const router = Router();
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({ 
+    storage: multer.memoryStorage() 
+});
 
+// POST
 router.post('/upsert', compel, ChatController.upsert);
 router.post('/list', compel, ChatController.list);
 router.post('/messages', compel, ChatController.messages);
