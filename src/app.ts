@@ -11,9 +11,6 @@ dotenv.config();
 
 const app = express();
 
-// Chống tấn công XSS, Clickjacking, Sniffing, ... 
-app.use(helmet());
-
 // Chống tấn công Brute Force
 const rate_limiting= rateLimit({
   windowMs: 5 * 60 * 1000,
@@ -23,13 +20,16 @@ const rate_limiting= rateLimit({
   legacyHeaders: false,
 });
 
-app.use('/api/v1/', rate_limiting);
-
 app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:4000',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   credentials: true
 }));
+
+// Chống tấn công XSS, Clickjacking, Sniffing, ... 
+app.use(helmet());
+
+app.use('/api/v1/', rate_limiting);
 
 app.use(express.json());
 

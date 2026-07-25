@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
+import { NotificationService } from './notification-services';
 import { v2 as cloudinary, type UploadApiResponse } from 'cloudinary';
 import dotenv from 'dotenv';
 dotenv.config();

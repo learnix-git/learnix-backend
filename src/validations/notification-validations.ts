@@ -1,17 +1,21 @@
-import { z } from 'zod';
+import { z } from "zod";
 
-// ! Danh sách thông báo — phân trang
+// Xác thực phân trang danh sách thông báo
 export const ListSchema = z.object({
-  page: z.number().int().min(1).default(1),
-  limit: z.number().int().min(1).max(50).default(20),
+  page: z.coerce.number().int("Page không hợp lệ").min(1, "Page tối thiểu là 1").default(1),
+  limit: z.coerce
+    .number()
+    .int("Limit không hợp lệ")
+    .min(1, "Limit tối thiểu là 1")
+    .max(50, "Limit tối đa là 50")
+    .default(20),
 });
 
-// ! Đánh dấu 1 thông báo đã đọc — id = Notification.id (cũng là "target id")
+export type ListData = z.infer<typeof ListSchema>;
+
+// Xác thực đánh dấu 1 thông báo đã đọc
 export const ReadSchema = z.object({
   id: z.string().min(1, "Thiếu id thông báo"),
 });
 
-// ! Đánh dấu cả nhóm (groupable, vd post_bid) đã đọc
-export const ReadGroupSchema = z.object({
-  groupKey: z.string().min(1, "Thiếu groupKey"),
-});
+export type ReadData = z.infer<typeof ReadSchema>;

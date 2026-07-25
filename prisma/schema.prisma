@@ -538,6 +538,7 @@ model Notice {
   title   String
   content String   @db.Text
   link    String?
+  type    String
   read    Boolean  @default(false)
   created DateTime @default(now())
 
