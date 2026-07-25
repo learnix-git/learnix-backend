@@ -6,7 +6,11 @@ import rateLimit from 'express-rate-limit';
 import AuthRoute from './routes/auth-routes';
 import ChatRoute from './routes/chat-routes';
 import NotificationRoute from './routes/notification-routes';
- 
+import UserRoute from './routes/user-routes';
+import TutorRoute from './routes/tutor-routes';
+import PostRoute from './routes/post-routes';
+import RequestRoute from './routes/request-routes';
+
 dotenv.config();
 
 const app = express();
@@ -36,6 +40,10 @@ app.use(express.json());
 app.use('/api/v1/auth', AuthRoute);
 app.use('/api/v1/chat', ChatRoute);
 app.use('/api/v1/notifications', NotificationRoute);
+app.use('/api/v1/user', UserRoute);
+app.use('/api/v1/tutor', TutorRoute);
+app.use('/api/v1/posts', PostRoute);
+app.use('/api/v1/requests', RequestRoute);
 
 app.get('/api/v1/health', (req: Request, res: Response) => {
   res.status(200).json({ status: 'SUCCESS', message: 'Backend đang chạy ... !' });
