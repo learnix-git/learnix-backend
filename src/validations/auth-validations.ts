@@ -21,8 +21,21 @@ export const registerSchema = z
   .object({
     name: z.string().min(1, "Vui lòng nhập họ tên").max(100, "Họ tên quá dài"),
     email: z.string().min(1, "Vui lòng nhập email").email("Email không hợp lệ").max(255, "Email quá dài"),
-    role: z.enum(["TEACHER", "STUDENT", "ADMIN"]).optional().default("STUDENT"),
+    role: z.enum(["TUTOR", "STUDENT", "ADMIN"]).optional().default("STUDENT"),
     gender: z.number().min(0, "Vui lòng chọn giới tính").max(2, "Giới tính không hợp lệ"),
+    dob: z
+      .string()
+      .optional()
+      .refine((val) => !val || !isNaN(Date.parse(val)), "Ngày sinh không hợp lệ")
+      .refine((val) => {
+        if (!val) return true;
+        const age = (Date.now() - new Date(val).getTime()) / (1000 * 60 * 60 * 24 * 365.25);
+        return age >= 6 && age <= 100;
+      }, "Ngày sinh không hợp lệ"),
+    phone: z
+      .string()
+      .optional()
+      .refine((val) => !val || /^(0|\+84)([35789])[0-9]{8}$/.test(val), "Số điện thoại không hợp lệ"),
     password: z
       .string()
       .min(1, "Vui lòng nhập mật khẩu")
