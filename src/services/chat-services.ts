@@ -363,7 +363,7 @@ export class ChatService {
     });
 
     const results = await Promise.all(
-      chats.map(async (chat) => {
+      chats.map(async (chat : any) => {
         // Xác định thời điểm đọc
         const readAt = chat.first === userId ? chat.read1 : chat.read2;
 

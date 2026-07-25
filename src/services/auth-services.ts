@@ -32,7 +32,7 @@ const google = new OAuth2Client(
 
 export class AuthService {  
   // ! Logic ĐĂNG KÝ
-  static async register(data: { email: string; password: string; name: string; role?: any; gender: number; dob?: string; phone?: string }) {
+  static async register(data: { email: string; password: string; name: string; role?: any; gender: number; dob?: string | undefined; phone?: string | undefined }) {
     // Kiểm tra email có bị trùng không
     const exist = await prisma.user.findUnique({
       where: { email: data.email },
