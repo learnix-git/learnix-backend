@@ -51,16 +51,32 @@ export class AuthService {
       2: Gender.OTHER,
     };
 
-    const user = await prisma.user.create({
-      data: {
-        email: data.email,
-        password: pass,
-        name: data.name,
-        gender: map[data.gender] || Gender.OTHER,
-        role: data.role || "STUDENT",
-        dob: data.dob ? new Date(data.dob) : null,
-        phone: data.phone ?? null,
-      },
+    const role = data.role || "STUDENT";
+
+    const user = await prisma.$transaction(async (tx) => {
+      const created = await tx.user.create({
+        data: {
+          email: data.email,
+          password: pass,
+          name: data.name,
+          gender: map[data.gender] || Gender.OTHER,
+          role,
+          dob: data.dob ? new Date(data.dob) : null,
+          phone: data.phone ?? null,
+        },
+      });
+
+      if (role === "TUTOR") {
+        await tx.tutor.create({
+          data: { user: created.id },
+        });
+      } else if (role === "STUDENT") {
+        await tx.student.create({
+          data: { user: created.id },
+        });
+      }
+
+      return created;
     });
 
     // Tạo token
@@ -124,15 +140,23 @@ export class AuthService {
 
     // Nếu chưa có tự động Đăng ký luôn cho khách!
     if (!user) {
-      user = await prisma.user.create({
-        data: {
-          email: payload.email,
-          name: payload.name || "Người dùng Google",
-          avatar: payload.picture || null,
-          provider: "google",
-          password: crypto.randomBytes(32).toString('hex'), 
-          role: "STUDENT",
-        },
+      user = await prisma.$transaction(async (tx) => {
+        const created = await tx.user.create({
+          data: {
+            email: payload.email!,
+            name: payload.name || "Người dùng Google",
+            avatar: payload.picture || null,
+            provider: "google",
+            password: crypto.randomBytes(32).toString('hex'),
+            role: "STUDENT",
+          },
+        });
+
+        await tx.student.create({
+          data: { user: created.id },
+        });
+
+        return created;
       });
     } else {
       // Cập nhật giờ login nếu đã có tài khoản

@@ -48,9 +48,14 @@ export type GetPostsData = z.infer<typeof GetPostsSchema>;
 
 // Schema gốc dùng chung cho tạo/sửa bài đăng
 const PostBaseSchema = z.object({
-  topic: z
-    .string()
-    .min(1, "Vui lòng chọn môn học"),
+  topics: z
+    .array(
+      z.union([
+        z.object({ subject: z.string().min(1) }),
+        z.object({ custom: z.string().min(1).max(100) }),
+      ])
+    )
+    .min(1, "Vui lòng chọn ít nhất 1 môn dạy"),
 
   title: z
     .string()
@@ -74,6 +79,8 @@ const PostBaseSchema = z.object({
     .max(12, "Khối lớp không hợp lệ"),
 
   mode: z.enum(["ONLINE", "OFFLINE"]),
+
+  venue: z.enum(["TUTOR", "STUDENT", "BOTH"]).optional(),
 
   city: z
     .string()
@@ -117,13 +124,19 @@ const PostBaseSchema = z.object({
 });
 
 // Xác thực tạo bài đăng
-export const CreatePostSchema = PostBaseSchema.refine(
-  (data) => data.to >= data.from,
-  {
+export const CreatePostSchema = PostBaseSchema
+  .refine((data) => data.to >= data.from, {
     message: "Giá tối đa phải lớn hơn hoặc bằng giá tối thiểu!",
     path: ["to"],
-  }
-);
+  })
+  .refine((data) => data.mode !== "OFFLINE" || data.venue !== undefined, {
+    message: "Vui lòng chọn địa điểm dạy khi chọn hình thức Offline",
+    path: ["venue"],
+  })
+  .refine(
+    (data) => !(data.mode === "OFFLINE" && data.venue === "TUTOR") || !!data.city?.trim(),
+    { message: "Vui lòng nhập khu vực dạy", path: ["city"] }
+  );
 
 export type CreatePostData = z.infer<typeof CreatePostSchema>;
 

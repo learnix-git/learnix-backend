@@ -30,6 +30,12 @@ enum Level {
   ALL
 }
 
+enum Venue {
+  TUTOR
+  STUDENT
+  BOTH
+}
+
 enum State {
   PENDING
   VERIFIED
@@ -247,6 +253,7 @@ model Post {
   level    Level    @default(ALL)
   grade    Int
   mode     Mode
+  venue    Venue?
   city     String?
   district String?
   ward     String?

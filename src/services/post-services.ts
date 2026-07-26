@@ -4,7 +4,7 @@
 // PATCH  /api/v1/posts/:id 
 // DELETE /api/v1/posts/:id 
 
-import { PrismaClient, Level, Mode, State } from '@prisma/client';
+import { PrismaClient, Level, Mode, Venue, State } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import dotenv from 'dotenv';
 
@@ -51,7 +51,11 @@ export class PostService {
     };
 
     if (filter.topic !== undefined) {
-      where.topic = filter.topic;
+      where.topics = {
+        some: {
+          subject: filter.topic,
+        },
+      };
     }
 
     if (filter.level !== undefined) {
@@ -96,10 +100,16 @@ export class PostService {
         where,
 
         include: {
-          subject: {
+          topics: {
             select: {
-              name: true,
-              slug: true,
+              custom: true,
+              topic: {
+                select: {
+                  id: true,
+                  name: true,
+                  slug: true,
+                },
+              },
             },
           },
 
@@ -145,10 +155,16 @@ export class PostService {
       },
 
       include: {
-        subject: {
+        topics: {
           select: {
-            name: true,
-            slug: true,
+            custom: true,
+            topic: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+              },
+            },
           },
         },
 
@@ -186,12 +202,13 @@ export class PostService {
   static async create_post(
     userId: string,
     data: {
-      topic: string;
+      topics: ({ subject: string } | { custom: string })[];
       title: string;
       content: string;
       level?: Level;
       grade: number;
       mode: Mode;
+      venue?: Venue;
       city?: string;
       district?: string;
       ward?: string;
@@ -203,11 +220,32 @@ export class PostService {
     }
   ) {
     const tutor = await this.get_tutor(userId);
+    const { topics, ...rest } = data;
 
     const post = await prisma.post.create({
       data: {
         owner: tutor.id,
-        ...data,
+        ...rest,
+        venue: rest.mode === "OFFLINE" ? rest.venue : null,
+        topics: {
+          create: topics.map((t) =>
+            "subject" in t ? { subject: t.subject } : { custom: t.custom }
+          ),
+        },
+      },
+      include: {
+        topics: {
+          select: {
+            custom: true,
+            topic: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -221,9 +259,11 @@ export class PostService {
     data: {
       title?: string;
       content?: string;
+      topics?: ({ subject: string } | { custom: string })[];
       level?: Level;
       grade?: number;
       mode?: Mode;
+      venue?: Venue;
       city?: string;
       district?: string;
       ward?: string;
@@ -266,6 +306,15 @@ export class PostService {
       payload.content = data.content;
     }
 
+    if (data.topics !== undefined) {
+      payload.topics = {
+        deleteMany: {},
+        create: data.topics.map((t) =>
+          "subject" in t ? { subject: t.subject } : { custom: t.custom }
+        ),
+      };
+    }
+
     if (data.level !== undefined) {
       payload.level = data.level;
     }
@@ -276,6 +325,14 @@ export class PostService {
 
     if (data.mode !== undefined) {
       payload.mode = data.mode;
+    }
+
+    if (data.mode === "ONLINE") {
+      payload.venue = null;
+    }
+
+    if (data.venue !== undefined) {
+      payload.venue = data.venue;
     }
 
     if (data.city !== undefined) {
