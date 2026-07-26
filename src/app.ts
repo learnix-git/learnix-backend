@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+
 import AuthRoute from './routes/auth-routes';
 import ChatRoute from './routes/chat-routes';
 import NotificationRoute from './routes/notification-routes';
@@ -10,6 +11,9 @@ import UserRoute from './routes/user-routes';
 import TutorRoute from './routes/tutor-routes';
 import PostRoute from './routes/post-routes';
 import RequestRoute from './routes/request-routes';
+import FollowRoute from './routes/follow-routes';
+import BookmarkRoute from './routes/bookmark-routes';
+import SubjectRoute from './routes/subject-routes';
 
 dotenv.config();
 
@@ -44,6 +48,9 @@ app.use('/api/v1/user', UserRoute);
 app.use('/api/v1/tutor', TutorRoute);
 app.use('/api/v1/posts', PostRoute);
 app.use('/api/v1/requests', RequestRoute);
+app.use('/api/v1/follows', FollowRoute);
+app.use('/api/v1/bookmarks', BookmarkRoute);
+app.use('/api/v1/subjects', SubjectRoute);
 
 app.get('/api/v1/health', (req: Request, res: Response) => {
   res.status(200).json({ status: 'SUCCESS', message: 'Backend đang chạy ... !' });

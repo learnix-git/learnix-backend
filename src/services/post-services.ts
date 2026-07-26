@@ -74,19 +74,16 @@ export class PostService {
       where.district = filter.district;
     }
 
-    if (
-      filter.minPrice !== undefined ||
-      filter.maxPrice !== undefined
-    ) {
-      where.price = {};
+    if (filter.minPrice !== undefined) {
+      where.to = {
+        gte: filter.minPrice,
+      };
+    }
 
-      if (filter.minPrice !== undefined) {
-        where.price.gte = filter.minPrice;
-      }
-
-      if (filter.maxPrice !== undefined) {
-        where.price.lte = filter.maxPrice;
-      }
+    if (filter.maxPrice !== undefined) {
+      where.from = {
+        lte: filter.maxPrice,
+      };
     }
 
     // Đếm và lấy danh sách song song
@@ -201,7 +198,8 @@ export class PostService {
       street?: string;
       lat?: number;
       lng?: number;
-      price: number;
+      from: number;
+      to: number;
     }
   ) {
     const tutor = await this.get_tutor(userId);
@@ -232,7 +230,8 @@ export class PostService {
       street?: string;
       lat?: number;
       lng?: number;
-      price?: number;
+      from?: number;
+      to?: number;
       status?: State;
     }
   ) {
@@ -246,6 +245,15 @@ export class PostService {
 
     if (!post || post.owner !== tutor.id) {
       throw new Error("Bài đăng không tồn tại!");
+    }
+
+    const nextFrom = data.from ?? Number(post.from);
+    const nextTo = data.to ?? Number(post.to);
+
+    if (nextTo < nextFrom) {
+      throw new Error(
+        "Giá tối đa phải lớn hơn hoặc bằng giá tối thiểu!"
+      );
     }
 
     const payload: Record<string, any> = {};
@@ -294,8 +302,12 @@ export class PostService {
       payload.lng = data.lng;
     }
 
-    if (data.price !== undefined) {
-      payload.price = data.price;
+    if (data.from !== undefined) {
+      payload.from = data.from;
+    }
+
+    if (data.to !== undefined) {
+      payload.to = data.to;
     }
 
     if (data.status !== undefined) {

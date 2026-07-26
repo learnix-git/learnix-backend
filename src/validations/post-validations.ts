@@ -46,8 +46,8 @@ export const GetPostsSchema = z.object({
 
 export type GetPostsData = z.infer<typeof GetPostsSchema>;
 
-// Xác thực tạo bài đăng
-export const CreatePostSchema = z.object({
+// Schema gốc dùng chung cho tạo/sửa bài đăng
+const PostBaseSchema = z.object({
   topic: z
     .string()
     .min(1, "Vui lòng chọn môn học"),
@@ -107,20 +107,43 @@ export const CreatePostSchema = z.object({
     .max(180)
     .optional(),
 
-  price: z
+  from: z
+    .number()
+    .min(1000, "Giá tối thiểu 1.000đ"),
+
+  to: z
     .number()
     .min(1000, "Giá tối thiểu 1.000đ"),
 });
 
+// Xác thực tạo bài đăng
+export const CreatePostSchema = PostBaseSchema.refine(
+  (data) => data.to >= data.from,
+  {
+    message: "Giá tối đa phải lớn hơn hoặc bằng giá tối thiểu!",
+    path: ["to"],
+  }
+);
+
 export type CreatePostData = z.infer<typeof CreatePostSchema>;
 
 // Xác thực sửa bài đăng
-export const UpdatePostSchema = CreatePostSchema
+export const UpdatePostSchema = PostBaseSchema
   .partial()
   .extend({
     status: z
       .enum(["OPEN", "DONE", "CANCEL", "HOLD"])
       .optional(),
-  });
+  })
+  .refine(
+    (data) =>
+      data.from === undefined ||
+      data.to === undefined ||
+      data.to >= data.from,
+    {
+      message: "Giá tối đa phải lớn hơn hoặc bằng giá tối thiểu!",
+      path: ["to"],
+    }
+  );
 
 export type UpdatePostData = z.infer<typeof UpdatePostSchema>;
