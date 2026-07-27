@@ -15,24 +15,19 @@ export const GetRequestsSchema = z.object({
     .max(50, "Limit tối đa là 50")
     .default(20),
 
-  topic: z.string().optional(),
+  topics: z.any().optional(),
 
   level: z
     .enum(["PRIMARY", "MIDDLE", "HIGH", "ALL"])
     .optional(),
 
-  grade: z.coerce
-    .number()
-    .int("Khối lớp không hợp lệ")
-    .optional(),
+  grades: z.any().optional(),
 
   mode: z
     .enum(["ONLINE", "OFFLINE"])
     .optional(),
 
   city: z.string().optional(),
-
-  district: z.string().optional(),
 
   minBudget: z.coerce
     .number()
@@ -49,9 +44,14 @@ export type GetRequestsData = z.infer<typeof GetRequestsSchema>;
 
 // Xác thực tạo yêu cầu
 export const CreateRequestSchema = z.object({
-  topic: z
-    .string()
-    .min(1, "Vui lòng chọn môn học"),
+  topics: z
+    .array(
+      z.object({
+        subject: z.string().optional(),
+        custom: z.string().optional(),
+      })
+    )
+    .min(1, "Vui lòng chọn ít nhất 1 môn học"),
 
   title: z
     .string()
@@ -68,22 +68,15 @@ export const CreateRequestSchema = z.object({
     .optional()
     .default("ALL"),
 
-  grade: z
-    .number()
-    .int("Khối lớp không hợp lệ")
-    .min(1, "Khối lớp không hợp lệ")
-    .max(12, "Khối lớp không hợp lệ"),
+  grades: z
+    .array(z.number().int().min(1).max(12))
+    .min(1, "Vui lòng chọn ít nhất 1 khối lớp"),
 
   mode: z.enum(["ONLINE", "OFFLINE"]),
 
   city: z
     .string()
     .max(100, "Tên tỉnh/thành quá dài")
-    .optional(),
-
-  district: z
-    .string()
-    .max(100, "Tên quận/huyện quá dài")
     .optional(),
 
   ward: z
@@ -108,9 +101,16 @@ export const CreateRequestSchema = z.object({
     .max(180)
     .optional(),
 
-  budget: z
+  from: z
     .number()
-    .min(1000, "Ngân sách tối thiểu 1.000đ"),
+    .min(1000, "Mức giá tối thiểu 1.000đ"),
+
+  to: z
+    .number()
+    .min(1000, "Mức giá tối thiểu 1.000đ"),
+
+  unit: z
+    .enum(["PER_SESSION", "PER_MONTH"]),
 
   count: z
     .number()

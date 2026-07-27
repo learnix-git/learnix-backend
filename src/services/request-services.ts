@@ -9,6 +9,9 @@ import {
   Level,
   Mode,
   State,
+  Venue,
+  Slot,
+  Unit,
 } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import dotenv from 'dotenv';
@@ -41,9 +44,9 @@ export class RequestService {
   static async get_requests(filter: {
     page: number;
     limit: number;
-    topic?: string;
+    topics?: { subject?: string; custom?: string }[];
     level?: Level;
-    grade?: number;
+    grades?: number[];
     mode?: Mode;
     city?: string;
     district?: string;
@@ -54,16 +57,28 @@ export class RequestService {
       status: State.OPEN,
     };
 
-    if (filter.topic !== undefined) {
-      where.topic = filter.topic;
+    if (filter.topics && filter.topics.length > 0) {
+      const subjectIds = filter.topics.map(t => t.subject).filter(Boolean);
+      const customTopics = filter.topics.map(t => t.custom).filter(Boolean);
+
+      where.topics = {
+        some: {
+          OR: [
+            { subject: { in: subjectIds } },
+            { custom: { in: customTopics } },
+          ],
+        },
+      };
     }
 
     if (filter.level !== undefined) {
       where.level = filter.level;
     }
 
-    if (filter.grade !== undefined) {
-      where.grade = filter.grade;
+    if (filter.grades && filter.grades.length > 0) {
+      where.grades = {
+        hasSome: filter.grades,
+      };
     }
 
     if (filter.mode !== undefined) {
@@ -82,14 +97,28 @@ export class RequestService {
       filter.minBudget !== undefined ||
       filter.maxBudget !== undefined
     ) {
-      where.budget = {};
-
+      // Logic lọc:
+      // Tìm các request mà khoảng [from, to] giao với khoảng [minBudget, maxBudget]
+      
+      const priceFilter: any[] = [];
+      
       if (filter.minBudget !== undefined) {
-        where.budget.gte = filter.minBudget;
+        priceFilter.push({
+          to: { gte: filter.minBudget }
+        });
       }
-
+      
       if (filter.maxBudget !== undefined) {
-        where.budget.lte = filter.maxBudget;
+        priceFilter.push({
+          from: { lte: filter.maxBudget }
+        });
+      }
+      
+      if (priceFilter.length > 0) {
+        where.AND = [
+          ...(where.AND || []),
+          ...priceFilter
+        ];
       }
     }
 
@@ -102,10 +131,14 @@ export class RequestService {
         where,
 
         include: {
-          subject: {
-            select: {
-              name: true,
-              slug: true,
+          topics: {
+            include: {
+              topic: {
+                select: {
+                  name: true,
+                  slug: true,
+                },
+              },
             },
           },
 
@@ -148,10 +181,14 @@ export class RequestService {
       },
 
       include: {
-        subject: {
-          select: {
-            name: true,
-            slug: true,
+        topics: {
+          include: {
+            topic: {
+              select: {
+                name: true,
+                slug: true,
+              },
+            },
           },
         },
 
@@ -159,7 +196,7 @@ export class RequestService {
           select: {
             id: true,
             city: true,
-            district: true,
+            ward: true,
 
             account: {
               select: {
@@ -184,21 +221,27 @@ export class RequestService {
   static async create_request(
     userId: string,
     data: {
-      topic: string;
+      topics: { subject?: string; custom?: string }[];
       title: string;
       desc: string;
       level?: Level;
-      grade: number;
+      grades: number[];
       mode: Mode;
       city?: string;
-      district?: string;
       ward?: string;
       street?: string;
       lat?: number;
       lng?: number;
-      budget: number;
+      from: number;
+      to: number;
+      unit: Unit;
       count?: number;
-      schedule?: string;
+      venue?: Venue;
+      flexible?: boolean;
+      days?: number[];
+      slot?: Slot;
+      startTime?: string;
+      endTime?: string;
     }
   ) {
     const student = await this.get_student(userId);
@@ -207,6 +250,12 @@ export class RequestService {
       data: {
         learner: student.id,
         ...data,
+        topics: {
+          create: data.topics.map((t) => ({
+            subject: t.subject || null,
+            custom: t.custom || null,
+          })),
+        },
       },
     });
 
@@ -221,17 +270,23 @@ export class RequestService {
       title?: string;
       desc?: string;
       level?: Level;
-      grade?: number;
+      grades?: number[];
       mode?: Mode;
       city?: string;
-      district?: string;
       ward?: string;
       street?: string;
       lat?: number;
       lng?: number;
-      budget?: number;
+      from?: number;
+      to?: number;
+      unit?: Unit;
       count?: number;
-      schedule?: string;
+      venue?: Venue;
+      flexible?: boolean;
+      days?: number[];
+      slot?: Slot;
+      startTime?: string;
+      endTime?: string;
       status?: State;
     }
   ) {
@@ -261,8 +316,8 @@ export class RequestService {
       payload.level = data.level;
     }
 
-    if (data.grade !== undefined) {
-      payload.grade = data.grade;
+    if (data.grades !== undefined) {
+      payload.grades = data.grades;
     }
 
     if (data.mode !== undefined) {
@@ -271,10 +326,6 @@ export class RequestService {
 
     if (data.city !== undefined) {
       payload.city = data.city;
-    }
-
-    if (data.district !== undefined) {
-      payload.district = data.district;
     }
 
     if (data.ward !== undefined) {
@@ -293,21 +344,26 @@ export class RequestService {
       payload.lng = data.lng;
     }
 
-    if (data.budget !== undefined) {
-      payload.budget = data.budget;
+    if (data.from !== undefined) {
+      payload.from = data.from;
     }
 
-    if (data.count !== undefined) {
-      payload.count = data.count;
+    if (data.to !== undefined) {
+      payload.to = data.to;
     }
 
-    if (data.schedule !== undefined) {
-      payload.schedule = data.schedule;
+    if (data.unit !== undefined) {
+      payload.unit = data.unit;
     }
 
-    if (data.status !== undefined) {
-      payload.status = data.status;
-    }
+    if (data.count !== undefined) payload.count = data.count;
+    if (data.flexible !== undefined) payload.flexible = data.flexible;
+    if (data.days !== undefined) payload.days = data.days;
+    if (data.slot !== undefined) payload.slot = data.slot;
+    if (data.startTime !== undefined) payload.startTime = data.startTime;
+    if (data.endTime !== undefined) payload.endTime = data.endTime;
+    if (data.venue !== undefined) payload.venue = data.venue;
+    if (data.status !== undefined) payload.status = data.status;
 
     const updated = await prisma.request.update({
       where: {

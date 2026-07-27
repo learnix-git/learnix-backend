@@ -238,7 +238,7 @@ model Subject {
   name   String        @unique
   slug   String        @unique
   skills Skill[]
-  needs  Request[]
+  needs  RequestSubject[]
   posts  PostSubject[]
 }
 
@@ -313,34 +313,51 @@ model PostSubject {
 model Request {
   id       String   @id @default(cuid())
   learner  String
-  topic    String
   title    String
   desc     String   @db.Text
   level    Level    @default(ALL)
-  grade    Int
+  grades   Int[]
   mode     Mode
   city     String?
   ward     String?
   street   String?
   lat      Float?
   lng      Float?
-  budget   Decimal  @db.Decimal(12, 2)
-  count    Int      @default(1)
-  schedule String?
+  from     Decimal  @db.Decimal(12, 2)
+  to       Decimal  @db.Decimal(12, 2)
+  unit     Unit     @default(PER_SESSION)
+  count     Int      @default(1)
+  flexible  Boolean  @default(false)
+  days      Int[]    @default([])
+  startTime String?
+  endTime   String?
+  slot      Slot?
+  venue     Venue?
   status   State    @default(OPEN)
   created  DateTime @default(now())
   updated  DateTime @updatedAt
 
-  student Student    @relation(fields: [learner], references: [id], onDelete: Cascade)
-  subject Subject    @relation(fields: [topic], references: [id], onDelete: Restrict)
+  student Student          @relation(fields: [learner], references: [id], onDelete: Cascade)
+  topics  RequestSubject[]
   bids    Bid[]
   deal    Contract?
   marks   Bookmark[]
 
-  @@index([topic, status])
   @@index([city])
-  @@index([level, grade])
-  @@index([budget])
+  @@index([level])
+}
+
+model RequestSubject {
+  id      String  @id @default(cuid())
+  request String
+  subject String?
+  custom  String?
+
+  target Request  @relation(fields: [request], references: [id], onDelete: Cascade)
+  topic  Subject? @relation(fields: [subject], references: [id], onDelete: Cascade)
+
+  @@unique([request, subject])
+  @@index([request])
 }
 
 model Bookmark {
