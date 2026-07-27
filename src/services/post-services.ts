@@ -1,10 +1,18 @@
-// GET    /api/v1/posts 
+// GET    /api/v1/posts
 // GET    /api/v1/posts/:id
-// POST   /api/v1/posts  
-// PATCH  /api/v1/posts/:id 
-// DELETE /api/v1/posts/:id 
+// POST   /api/v1/posts
+// PATCH  /api/v1/posts/:id
+// DELETE /api/v1/posts/:id
 
-import { PrismaClient, Level, Mode, Venue, State } from '@prisma/client';
+import {
+  PrismaClient,
+  Level,
+  Mode,
+  Venue,
+  Unit,
+  Slot,
+  State,
+} from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import dotenv from 'dotenv';
 
@@ -41,11 +49,10 @@ export class PostService {
     grade?: number;
     mode?: Mode;
     city?: string;
-    district?: string;
     minPrice?: number;
     maxPrice?: number;
+    unit?: Unit;
   }) {
-    // Xây điều kiện lọc động
     const where: Record<string, any> = {
       status: State.OPEN,
     };
@@ -63,7 +70,9 @@ export class PostService {
     }
 
     if (filter.grade !== undefined) {
-      where.grade = filter.grade;
+      where.grades = {
+        has: filter.grade,
+      };
     }
 
     if (filter.mode !== undefined) {
@@ -74,8 +83,8 @@ export class PostService {
       where.city = filter.city;
     }
 
-    if (filter.district !== undefined) {
-      where.district = filter.district;
+    if (filter.unit !== undefined) {
+      where.unit = filter.unit;
     }
 
     if (filter.minPrice !== undefined) {
@@ -90,7 +99,6 @@ export class PostService {
       };
     }
 
-    // Đếm và lấy danh sách song song
     const [total, rows] = await Promise.all([
       prisma.post.count({
         where,
@@ -103,6 +111,7 @@ export class PostService {
           topics: {
             select: {
               custom: true,
+
               topic: {
                 select: {
                   id: true,
@@ -110,6 +119,15 @@ export class PostService {
                   slug: true,
                 },
               },
+            },
+          },
+
+          times: {
+            select: {
+              day: true,
+              slot: true,
+              start: true,
+              end: true,
             },
           },
 
@@ -158,6 +176,7 @@ export class PostService {
         topics: {
           select: {
             custom: true,
+
             topic: {
               select: {
                 id: true,
@@ -165,6 +184,15 @@ export class PostService {
                 slug: true,
               },
             },
+          },
+        },
+
+        times: {
+          select: {
+            day: true,
+            slot: true,
+            start: true,
+            end: true,
           },
         },
 
@@ -202,41 +230,86 @@ export class PostService {
   static async create_post(
     userId: string,
     data: {
-      topics: ({ subject: string } | { custom: string })[];
+      topics: (
+        | { subject: string }
+        | { custom: string }
+      )[];
+
+      times?: {
+        day: number;
+        slot: Slot;
+        start: string;
+        end: string;
+      }[];
+
       title: string;
       content: string;
       level?: Level;
-      grade: number;
+      grades: number[];
       mode: Mode;
       venue?: Venue;
       city?: string;
-      district?: string;
       ward?: string;
       street?: string;
       lat?: number;
       lng?: number;
       from: number;
       to: number;
+      hours?: number;
+      unit?: Unit;
+      flexible?: boolean;
     }
   ) {
     const tutor = await this.get_tutor(userId);
-    const { topics, ...rest } = data;
+
+    const {
+      topics,
+      times,
+      ...rest
+    } = data;
 
     const post = await prisma.post.create({
       data: {
         owner: tutor.id,
+
         ...rest,
-        venue: rest.mode === "OFFLINE" ? rest.venue : null,
+
+        hours: rest.unit === "PER_SESSION" ? rest.hours : null,
+
+        venue:
+          rest.mode === "OFFLINE"
+            ? rest.venue
+            : null,
+
         topics: {
           create: topics.map((t) =>
-            "subject" in t ? { subject: t.subject } : { custom: t.custom }
+            "subject" in t
+              ? {
+                subject: t.subject,
+              }
+              : {
+                custom: t.custom,
+              }
           ),
         },
+
+        times: times
+          ? {
+            create: times.map((t) => ({
+              day: t.day,
+              slot: t.slot,
+              start: t.start,
+              end: t.end,
+            })),
+          }
+          : undefined,
       },
+
       include: {
         topics: {
           select: {
             custom: true,
+
             topic: {
               select: {
                 id: true,
@@ -244,6 +317,15 @@ export class PostService {
                 slug: true,
               },
             },
+          },
+        },
+
+        times: {
+          select: {
+            day: true,
+            slot: true,
+            start: true,
+            end: true,
           },
         },
       },
@@ -259,20 +341,34 @@ export class PostService {
     data: {
       title?: string;
       content?: string;
-      topics?: ({ subject: string } | { custom: string })[];
+
+      topics?: (
+        | { subject: string }
+        | { custom: string }
+      )[];
+
+      times?: {
+        day: number;
+        slot: Slot;
+        start: string;
+        end: string;
+      }[];
+
       level?: Level;
-      grade?: number;
+      grades?: number[];
       mode?: Mode;
       venue?: Venue;
       city?: string;
-      district?: string;
       ward?: string;
       street?: string;
       lat?: number;
       lng?: number;
       from?: number;
       to?: number;
+      hours?: number;
+      unit?: Unit;
       status?: State;
+      flexible?: boolean;
     }
   ) {
     const tutor = await this.get_tutor(userId);
@@ -309,9 +405,29 @@ export class PostService {
     if (data.topics !== undefined) {
       payload.topics = {
         deleteMany: {},
+
         create: data.topics.map((t) =>
-          "subject" in t ? { subject: t.subject } : { custom: t.custom }
+          "subject" in t
+            ? {
+              subject: t.subject,
+            }
+            : {
+              custom: t.custom,
+            }
         ),
+      };
+    }
+
+    if (data.times !== undefined) {
+      payload.times = {
+        deleteMany: {},
+
+        create: data.times.map((t) => ({
+          day: t.day,
+          slot: t.slot,
+          start: t.start,
+          end: t.end,
+        })),
       };
     }
 
@@ -319,8 +435,8 @@ export class PostService {
       payload.level = data.level;
     }
 
-    if (data.grade !== undefined) {
-      payload.grade = data.grade;
+    if (data.grades !== undefined) {
+      payload.grades = data.grades;
     }
 
     if (data.mode !== undefined) {
@@ -335,12 +451,16 @@ export class PostService {
       payload.venue = data.venue;
     }
 
-    if (data.city !== undefined) {
-      payload.city = data.city;
+    if (data.hours !== undefined) {
+      payload.hours = data.hours;
     }
 
-    if (data.district !== undefined) {
-      payload.district = data.district;
+    if (data.unit === "PER_MONTH") {
+      payload.hours = null;
+    }
+
+    if (data.city !== undefined) {
+      payload.city = data.city;
     }
 
     if (data.ward !== undefined) {
@@ -367,8 +487,16 @@ export class PostService {
       payload.to = data.to;
     }
 
+    if (data.unit !== undefined) {
+      payload.unit = data.unit;
+    }
+
     if (data.status !== undefined) {
       payload.status = data.status;
+    }
+
+    if (data.flexible !== undefined) {
+      payload.flexible = data.flexible;
     }
 
     const updated = await prisma.post.update({
@@ -377,13 +505,41 @@ export class PostService {
       },
 
       data: payload,
+
+      include: {
+        topics: {
+          select: {
+            custom: true,
+
+            topic: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+              },
+            },
+          },
+        },
+
+        times: {
+          select: {
+            day: true,
+            slot: true,
+            start: true,
+            end: true,
+          },
+        },
+      },
     });
 
     return updated;
   }
 
   // Hàm xoá bài đăng
-  static async delete_post(userId: string, postId: string) {
+  static async delete_post(
+    userId: string,
+    postId: string
+  ) {
     const tutor = await this.get_tutor(userId);
 
     const post = await prisma.post.findUnique({

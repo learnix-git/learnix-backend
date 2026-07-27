@@ -12,6 +12,17 @@ enum Role {
   ADMIN
 }
 
+enum Slot {
+  MORNING // Sáng
+  AFTERNOON // Chiều
+  EVENING // Tối
+}
+
+enum Unit {
+  PER_SESSION // VNĐ / buổi
+  PER_MONTH // VNĐ / tháng
+}
+
 enum Gender {
   MALE
   FEMALE
@@ -115,16 +126,15 @@ model User {
 }
 
 model Student {
-  id       String   @id @default(cuid())
-  user     String   @unique
-  city     String?
-  district String?
-  ward     String?
-  street   String?
-  lat      Float?
-  lng      Float?
-  created  DateTime @default(now())
-  updated  DateTime @updatedAt
+  id      String   @id @default(cuid())
+  user    String   @unique
+  city    String?
+  ward    String?
+  street  String?
+  lat     Float?
+  lng     Float?
+  created DateTime @default(now())
+  updated DateTime @updatedAt
 
   account User @relation(fields: [user], references: [id], onDelete: Cascade)
 
@@ -133,31 +143,30 @@ model Student {
   reviews Review[]
   follows Follow[]
 
-  @@index([city, district])
+  @@index([city])
 }
 
 model Tutor {
-  id       String   @id @default(cuid())
-  user     String   @unique
-  bio      String?  @db.Text
-  idcard   String?  @unique
-  level    String?
-  major    String?
-  school   String?
-  exp      Int      @default(0)
-  status   State    @default(PENDING)
-  rate     Decimal  @default(0.00) @db.Decimal(12, 2)
-  modes    Mode[]
-  city     String?
-  district String?
-  ward     String?
-  street   String?
-  lat      Float?
-  lng      Float?
-  rating   Decimal  @default(0.00) @db.Decimal(3, 2)
-  reviews  Int      @default(0)
-  created  DateTime @default(now())
-  updated  DateTime @updatedAt
+  id      String   @id @default(cuid())
+  user    String   @unique
+  bio     String?  @db.Text
+  idcard  String?  @unique
+  level   String?
+  major   String?
+  school  String?
+  exp     Int      @default(0)
+  status  State    @default(PENDING)
+  rate    Decimal  @default(0.00) @db.Decimal(12, 2)
+  modes   Mode[]
+  city    String?
+  ward    String?
+  street  String?
+  lat     Float?
+  lng     Float?
+  rating  Decimal  @default(0.00) @db.Decimal(3, 2)
+  reviews Int      @default(0)
+  created DateTime @default(now())
+  updated DateTime @updatedAt
 
   account User @relation(fields: [user], references: [id], onDelete: Cascade)
 
@@ -173,7 +182,7 @@ model Tutor {
   marks   Bookmark[]
 
   @@index([status, rating])
-  @@index([city, district])
+  @@index([city])
   @@index([exp])
 }
 
@@ -246,29 +255,46 @@ model Skill {
 }
 
 model Post {
-  id       String   @id @default(cuid())
-  owner    String
-  title    String
-  content  String   @db.Text
-  level    Level    @default(ALL)
-  grade    Int
-  mode     Mode
-  venue    Venue?
-  city     String?
-  district String?
-  ward     String?
-  street   String?
-  lat      Float?
-  lng      Float?
+  id      String   @id @default(cuid())
+  owner   String
+  title   String
+  content String   @db.Text
+  level   Level    @default(ALL)
+  grades  Int[]
+  mode    Mode
+  venue   Venue?
+  city    String?
+  ward    String?
+  street  String?
+  lat     Float?
+  lng     Float?
   from    Decimal  @db.Decimal(12, 2)
   to      Decimal  @db.Decimal(12, 2)
-  status   State    @default(OPEN)
-  created  DateTime @default(now())
-  updated  DateTime @updatedAt
+  unit    Unit     @default(PER_SESSION)
+  hours   Float?
+  flexible Boolean  @default(false)
+  status  State    @default(OPEN)
+  created DateTime @default(now())
+  updated DateTime @updatedAt
 
-  tutor     Tutor         @relation(fields: [owner], references: [id], onDelete: Cascade)
+  tutor     Tutor              @relation(fields: [owner], references: [id], onDelete: Cascade)
   topics    PostSubject[]
   contracts Contract[]
+  times     PostAvailability[]
+}
+
+model PostAvailability {
+  id   String @id @default(cuid())
+  post String
+  day  Int
+  slot Slot
+  start String
+  end   String
+
+  target Post @relation(fields: [post], references: [id], onDelete: Cascade)
+
+  @@unique([post, day, slot])
+  @@index([post])
 }
 
 model PostSubject {
@@ -294,7 +320,6 @@ model Request {
   grade    Int
   mode     Mode
   city     String?
-  district String?
   ward     String?
   street   String?
   lat      Float?
@@ -313,7 +338,7 @@ model Request {
   marks   Bookmark[]
 
   @@index([topic, status])
-  @@index([city, district])
+  @@index([city])
   @@index([level, grade])
   @@index([budget])
 }

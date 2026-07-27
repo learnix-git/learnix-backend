@@ -15,10 +15,17 @@ export const GetPostsSchema = z.object({
     .max(50, "Limit tối đa là 50")
     .default(20),
 
-  topic: z.string().optional(),
+  topic: z
+    .string()
+    .optional(),
 
   level: z
-    .enum(["PRIMARY", "MIDDLE", "HIGH", "ALL"])
+    .enum([
+      "PRIMARY",
+      "MIDDLE",
+      "HIGH",
+      "ALL",
+    ])
     .optional(),
 
   grade: z.coerce
@@ -27,11 +34,15 @@ export const GetPostsSchema = z.object({
     .optional(),
 
   mode: z
-    .enum(["ONLINE", "OFFLINE"])
+    .enum([
+      "ONLINE",
+      "OFFLINE",
+    ])
     .optional(),
 
-  city: z.string().optional(),
-  district: z.string().optional(),
+  city: z
+    .string()
+    .optional(),
 
   minPrice: z.coerce
     .number()
@@ -42,20 +53,65 @@ export const GetPostsSchema = z.object({
     .number()
     .min(0, "Giá không hợp lệ")
     .optional(),
+
+  unit: z
+    .enum([
+      "PER_SESSION",
+      "PER_MONTH",
+    ])
+    .optional(),
 });
 
 export type GetPostsData = z.infer<typeof GetPostsSchema>;
+
+// Xác thực 1 khung giờ rảnh (ngày x buổi)
+const TimeSlotSchema = z.object({
+  day: z
+    .number()
+    .int("Thứ không hợp lệ")
+    .min(0, "Thứ không hợp lệ")
+    .max(6, "Thứ không hợp lệ"),
+
+  slot: z.enum([
+    "MORNING",
+    "AFTERNOON",
+    "EVENING",
+  ]),
+
+  start: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Giờ bắt đầu không hợp lệ (HH:MM)"),
+
+  end: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Giờ kết thúc không hợp lệ (HH:MM)"),
+});
 
 // Schema gốc dùng chung cho tạo/sửa bài đăng
 const PostBaseSchema = z.object({
   topics: z
     .array(
       z.union([
-        z.object({ subject: z.string().min(1) }),
-        z.object({ custom: z.string().min(1).max(100) }),
+        z.object({
+          subject: z
+            .string()
+            .min(1),
+        }),
+
+        z.object({
+          custom: z
+            .string()
+            .min(1)
+            .max(100),
+        }),
       ])
     )
     .min(1, "Vui lòng chọn ít nhất 1 môn dạy"),
+
+  times: z
+    .array(TimeSlotSchema)
+    .max(21, "Tối đa 21 khung (7 ngày x 3 buổi)")
+    .optional(),
 
   title: z
     .string()
@@ -68,28 +124,40 @@ const PostBaseSchema = z.object({
     .max(5000, "Nội dung tối đa 5000 ký tự"),
 
   level: z
-    .enum(["PRIMARY", "MIDDLE", "HIGH", "ALL"])
+    .enum([
+      "PRIMARY",
+      "MIDDLE",
+      "HIGH",
+      "ALL",
+    ])
     .optional()
     .default("ALL"),
 
-  grade: z
-    .number()
-    .int("Khối lớp không hợp lệ")
-    .min(1, "Khối lớp không hợp lệ")
-    .max(12, "Khối lớp không hợp lệ"),
+  grades: z
+    .array(
+      z.number()
+       .int("Khối lớp không hợp lệ")
+       .min(1, "Khối lớp không hợp lệ")
+       .max(12, "Khối lớp không hợp lệ")
+    )
+    .min(1, "Vui lòng chọn ít nhất 1 khối lớp"),
 
-  mode: z.enum(["ONLINE", "OFFLINE"]),
+  mode: z.enum([
+    "ONLINE",
+    "OFFLINE",
+  ]),
 
-  venue: z.enum(["TUTOR", "STUDENT", "BOTH"]).optional(),
+  venue: z
+    .enum([
+      "TUTOR",
+      "STUDENT",
+      "BOTH",
+    ])
+    .optional(),
 
   city: z
     .string()
     .max(100, "Tên tỉnh/thành quá dài")
-    .optional(),
-
-  district: z
-    .string()
-    .max(100, "Tên quận/huyện quá dài")
     .optional(),
 
   ward: z
@@ -121,22 +189,61 @@ const PostBaseSchema = z.object({
   to: z
     .number()
     .min(1000, "Giá tối thiểu 1.000đ"),
+
+  unit: z
+    .enum([
+      "PER_SESSION",
+      "PER_MONTH",
+    ])
+    .optional()
+    .default("PER_SESSION"),
+
+  hours: z
+    .number()
+    .min(0.5, "Tối thiểu 0.5 tiếng")
+    .max(8, "Tối đa 8 tiếng/buổi")
+    .optional(),
+
+  flexible: z
+    .boolean()
+    .optional()
+    .default(false),
 });
 
 // Xác thực tạo bài đăng
 export const CreatePostSchema = PostBaseSchema
-  .refine((data) => data.to >= data.from, {
-    message: "Giá tối đa phải lớn hơn hoặc bằng giá tối thiểu!",
-    path: ["to"],
-  })
-  .refine((data) => data.mode !== "OFFLINE" || data.venue !== undefined, {
-    message: "Vui lòng chọn địa điểm dạy khi chọn hình thức Offline",
-    path: ["venue"],
-  })
   .refine(
-    (data) => !(data.mode === "OFFLINE" && data.venue === "TUTOR") || !!data.city?.trim(),
-    { message: "Vui lòng nhập khu vực dạy", path: ["city"] }
-  );
+    (data) => data.to >= data.from,
+    {
+      message: "Giá tối đa phải lớn hơn hoặc bằng giá tối thiểu!",
+      path: ["to"],
+    }
+  )
+  .refine(
+    (data) =>
+      data.mode !== "OFFLINE" ||
+      data.venue !== undefined,
+    {
+      message:
+        "Vui lòng chọn địa điểm dạy khi chọn hình thức Offline",
+      path: ["venue"],
+    }
+  )
+  .refine(
+    (data) =>
+      !(
+        data.mode === "OFFLINE" &&
+        data.venue === "TUTOR"
+      ) || !!data.city?.trim(),
+    {
+      message: "Vui lòng nhập khu vực dạy",
+      path: ["city"],
+    }
+  )
+  .refine((data) => data.unit !== "PER_SESSION" || data.hours !== undefined, {
+    message: "Vui lòng nhập số tiếng/buổi",
+    path: ["hours"],
+  });
 
 export type CreatePostData = z.infer<typeof CreatePostSchema>;
 
@@ -145,7 +252,12 @@ export const UpdatePostSchema = PostBaseSchema
   .partial()
   .extend({
     status: z
-      .enum(["OPEN", "DONE", "CANCEL", "HOLD"])
+      .enum([
+        "OPEN",
+        "DONE",
+        "CANCEL",
+        "HOLD",
+      ])
       .optional(),
   })
   .refine(
