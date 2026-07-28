@@ -9,9 +9,10 @@ import {
 export class PostController {
   static async get_posts(req: Request, res: Response) {
     try {
+      const userId = res.locals.user?.id;
       const validated = GetPostsSchema.parse(req.query);
 
-      const posts = await PostService.get_posts(validated);
+      const posts = await PostService.get_posts(validated, userId);
 
       res.status(200).json({
         code: 200,
@@ -32,9 +33,10 @@ export class PostController {
     res: Response
   ) {
     try {
+      const userId = res.locals.user?.id;
       const { id } = req.params;
 
-      const post = await PostService.get_post(id);
+      const post = await PostService.get_post(id, userId);
 
       res.status(200).json({
         code: 200,

@@ -11,6 +11,6 @@ router.get('/', compel, BookmarkController.get_bookmarks);
 router.post('/', compel, BookmarkController.create_bookmark);
 
 // DELETE
-router.delete('/:requestId', compel, BookmarkController.delete_bookmark);
+router.delete('/:id', compel, BookmarkController.delete_bookmark);
 
 export default router;

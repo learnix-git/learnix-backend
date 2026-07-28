@@ -49,10 +49,12 @@ export class PostService {
     grade?: number;
     mode?: Mode;
     city?: string;
+    ward?: string;
     minPrice?: number;
     maxPrice?: number;
     unit?: Unit;
-  }) {
+    sort?: string;
+  }, userId?: string) {
     const where: Record<string, any> = {
       status: State.OPEN,
     };
@@ -81,6 +83,10 @@ export class PostService {
 
     if (filter.city !== undefined) {
       where.city = filter.city;
+    }
+
+    if (filter.ward !== undefined) {
+      where.ward = filter.ward;
     }
 
     if (filter.unit !== undefined) {
@@ -145,11 +151,21 @@ export class PostService {
               },
             },
           },
+          ...(userId ? {
+            savedBy: {
+              where: { user: userId },
+              select: { id: true }
+            }
+          } : {})
         },
 
-        orderBy: {
-          created: "desc",
-        },
+      orderBy: (() => {
+          if (filter.sort === "oldest") return { created: "asc" };
+          if (filter.sort === "rating-high") return { tutor: { rating: "desc" } };
+          if (filter.sort === "price-low") return { from: "asc" };
+          if (filter.sort === "price-high") return { from: "desc" };
+          return { created: "desc" };
+        })(),
 
         skip: (filter.page - 1) * filter.limit,
         take: filter.limit,
@@ -157,7 +173,10 @@ export class PostService {
     ]);
 
     return {
-      items: rows,
+      items: rows.map(r => ({
+        ...r,
+        saved: userId ? (r as any).savedBy?.length > 0 : false,
+      })),
       total,
       page: filter.page,
       limit: filter.limit,
@@ -166,7 +185,7 @@ export class PostService {
   }
 
   // Hàm lấy chi tiết 1 bài đăng
-  static async get_post(postId: string) {
+  static async get_post(postId: string, userId?: string) {
     const post = await prisma.post.findUnique({
       where: {
         id: postId,
@@ -215,6 +234,12 @@ export class PostService {
               },
             },
           },
+          ...(userId ? {
+            savedBy: {
+              where: { user: userId },
+              select: { id: true }
+            }
+          } : {})
         },
       },
     });
@@ -223,7 +248,10 @@ export class PostService {
       throw new Error("Bài đăng không tồn tại!");
     }
 
-    return post;
+    return {
+      ...post,
+      saved: userId ? (post as any).savedBy?.length > 0 : false,
+    };
   }
 
   // Hàm tạo bài đăng

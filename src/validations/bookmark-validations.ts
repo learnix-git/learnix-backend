@@ -20,9 +20,10 @@ export type GetBookmarksData = z.infer<typeof GetBookmarksSchema>;
 
 // Xác thực bookmark request
 export const CreateBookmarkSchema = z.object({
-  requestId: z
-    .string()
-    .min(1, "Thiếu requestId"),
+  requestId: z.string().optional(),
+  postId: z.string().optional(),
+}).refine(data => data.requestId || data.postId, {
+  message: "Phải cung cấp requestId hoặc postId",
 });
 
 export type CreateBookmarkData = z.infer<typeof CreateBookmarkSchema>;

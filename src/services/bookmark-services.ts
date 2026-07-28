@@ -39,13 +39,13 @@ export class BookmarkService {
     const tutor = await this.get_tutor(userId);
 
     const [total, rows] = await Promise.all([
-      prisma.bookmark.count({
+      prisma.savedRequest.count({
         where: {
           owner: tutor.id,
         },
       }),
 
-      prisma.bookmark.findMany({
+      prisma.savedRequest.findMany({
         where: {
           owner: tutor.id,
         },
@@ -53,10 +53,14 @@ export class BookmarkService {
         include: {
           request: {
             include: {
-              subject: {
-                select: {
-                  name: true,
-                  slug: true,
+              topics: {
+                include: {
+                  topic: {
+                    select: {
+                      name: true,
+                      slug: true,
+                    },
+                  },
                 },
               },
 
@@ -93,6 +97,44 @@ export class BookmarkService {
     };
   }
 
+  // Hàm bookmark 1 bài đăng (gia sư)
+  static async bookmark_post(userId: string, postId: string) {
+    const post = await prisma.post.findUnique({
+      where: { id: postId },
+    });
+    if (!post) throw new Error("Bài đăng không tồn tại!");
+
+    return await prisma.savedPost.upsert({
+      where: {
+        user_post: {
+          user: userId,
+          post: postId,
+        },
+      },
+      update: {},
+      create: {
+        user: userId,
+        post: postId,
+      },
+    });
+  }
+
+  // Hàm bỏ bookmark 1 bài đăng (gia sư)
+  static async delete_bookmark_post(userId: string, postId: string) {
+    try {
+      await prisma.savedPost.delete({
+        where: {
+          user_post: {
+            user: userId,
+            post: postId,
+          },
+        },
+      });
+    } catch (e) {
+      // Ignore if not exist
+    }
+  }
+
   // Hàm bookmark 1 request
   static async create_bookmark(
     userId: string,
@@ -110,7 +152,7 @@ export class BookmarkService {
       throw new Error("Yêu cầu không tồn tại!");
     }
 
-    const exist = await prisma.bookmark.findUnique({
+    const exist = await prisma.savedRequest.findUnique({
       where: {
         owner_need: {
           owner: tutor.id,
@@ -123,7 +165,7 @@ export class BookmarkService {
       throw new Error("Bạn đã lưu yêu cầu này rồi!");
     }
 
-    const bookmark = await prisma.bookmark.create({
+    const bookmark = await prisma.savedRequest.create({
       data: {
         owner: tutor.id,
         need: requestId,
@@ -140,7 +182,7 @@ export class BookmarkService {
   ) {
     const tutor = await this.get_tutor(userId);
 
-    const bookmark = await prisma.bookmark.findUnique({
+    const bookmark = await prisma.savedRequest.findUnique({
       where: {
         owner_need: {
           owner: tutor.id,
@@ -149,11 +191,9 @@ export class BookmarkService {
       },
     });
 
-    if (!bookmark) {
-      throw new Error("Bạn chưa lưu yêu cầu này!");
-    }
+    if (!bookmark) return;
 
-    await prisma.bookmark.delete({
+    await prisma.savedRequest.delete({
       where: {
         owner_need: {
           owner: tutor.id,

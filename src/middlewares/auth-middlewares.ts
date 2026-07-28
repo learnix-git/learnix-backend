@@ -27,3 +27,19 @@ export const compel = (req: Request, res: Response, next: NextFunction) => {
     return res.status(401).json({ status: "ERROR", message: "Token không hợp lệ hoặc đã hết hạn!" });
   }
 };
+
+export const extract = (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const header = req.headers.authorization;
+    if (header) {
+      const token = header.split(' ')[1];
+      if (token) {
+        const decoded = verify(token);
+        res.locals.user = decoded;
+      }
+    }
+  } catch (error: any) {
+    // ignore
+  }
+  next();
+};

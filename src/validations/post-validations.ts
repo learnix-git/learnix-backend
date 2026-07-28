@@ -44,6 +44,10 @@ export const GetPostsSchema = z.object({
     .string()
     .optional(),
 
+  ward: z
+    .string()
+    .optional(),
+
   minPrice: z.coerce
     .number()
     .min(0, "Giá không hợp lệ")
@@ -60,6 +64,8 @@ export const GetPostsSchema = z.object({
       "PER_MONTH",
     ])
     .optional(),
+
+  sort: z.string().optional(),
 });
 
 export type GetPostsData = z.infer<typeof GetPostsSchema>;

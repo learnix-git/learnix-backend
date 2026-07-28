@@ -44,11 +44,14 @@ export class BookmarkController {
 
       const validated = CreateBookmarkSchema.parse(req.body);
 
-      const bookmark =
-        await BookmarkService.create_bookmark(
-          userId,
-          validated.requestId
-        );
+      let bookmark;
+      if (validated.requestId) {
+        bookmark = await BookmarkService.create_bookmark(userId, validated.requestId);
+      } else if (validated.postId) {
+        bookmark = await BookmarkService.bookmark_post(userId, validated.postId);
+      } else {
+        throw new Error("Dữ liệu không hợp lệ!");
+      }
 
       res.status(201).json({
         code: 201,
@@ -59,24 +62,29 @@ export class BookmarkController {
         code: 400,
         message:
           error.message ||
-          "Lưu yêu cầu thất bại!",
+          "Lưu thất bại!",
       });
     }
   }
 
   static async delete_bookmark(
-    req: Request<{ requestId: string }>,
+    req: Request<{ id: string }, any, any, { type?: string }>,
     res: Response
   ) {
     try {
       const userId = res.locals.user.id;
+      const { id } = req.params;
+      const { type } = req.query;
 
-      const { requestId } = req.params;
-
-      await BookmarkService.delete_bookmark(
-        userId,
-        requestId
-      );
+      if (type === 'post') {
+        await BookmarkService.delete_bookmark_post(userId, id);
+      } else if (type === 'request') {
+        await BookmarkService.delete_bookmark(userId, id);
+      } else {
+        // Fallback: xoá ở cả 2 bảng nếu không truyền type
+        await BookmarkService.delete_bookmark(userId, id);
+        await BookmarkService.delete_bookmark_post(userId, id);
+      }
 
       res.status(200).json({
         code: 200,

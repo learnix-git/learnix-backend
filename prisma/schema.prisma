@@ -120,6 +120,7 @@ model User {
   charges     Report[]     @relation("Target")
   audits      Audit[]
   payments    Payment[]
+  savedPosts  SavedPost[]
 
   @@index([role, active])
   @@index([created])
@@ -179,7 +180,7 @@ model Tutor {
   follows Follow[]
   degrees Degree[]
   jobs    History[]
-  marks   Bookmark[]
+  marks   SavedRequest[]
 
   @@index([status, rating])
   @@index([city])
@@ -281,6 +282,7 @@ model Post {
   topics    PostSubject[]
   contracts Contract[]
   times     PostAvailability[]
+  savedBy   SavedPost[]
 }
 
 model PostAvailability {
@@ -341,7 +343,7 @@ model Request {
   topics  RequestSubject[]
   bids    Bid[]
   deal    Contract?
-  marks   Bookmark[]
+  marks   SavedRequest[]
 
   @@index([city])
   @@index([level])
@@ -360,7 +362,7 @@ model RequestSubject {
   @@index([request])
 }
 
-model Bookmark {
+model SavedRequest {
   id      String   @id @default(cuid())
   owner   String
   need    String
@@ -523,6 +525,19 @@ model Follow {
 
   @@unique([learner, tutor])
   @@index([learner])
+}
+
+model SavedPost {
+  id      String   @id @default(cuid())
+  user    String
+  post    String
+  created DateTime @default(now())
+
+  account User @relation(fields: [user], references: [id], onDelete: Cascade)
+  class   Post @relation(fields: [post], references: [id], onDelete: Cascade)
+
+  @@unique([user, post])
+  @@index([user])
 }
 
 model Chat {
