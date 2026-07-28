@@ -123,6 +123,30 @@ export const CreateRequestSchema = z.object({
     .string()
     .max(255, "Lịch học quá dài")
     .optional(),
+
+  venue: z
+    .enum(["STUDENT", "TUTOR", "BOTH"])
+    .optional(),
+
+  flexible: z
+    .boolean()
+    .optional(),
+
+  days: z
+    .array(z.number().int().min(2).max(8))
+    .optional(),
+
+  slot: z
+    .enum(["MORNING", "AFTERNOON", "EVENING"])
+    .optional(),
+
+  startTime: z
+    .string()
+    .optional(),
+
+  endTime: z
+    .string()
+    .optional(),
 });
 
 export type CreateRequestData = z.infer<typeof CreateRequestSchema>;

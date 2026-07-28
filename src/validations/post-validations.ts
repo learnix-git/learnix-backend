@@ -65,6 +65,12 @@ export const GetPostsSchema = z.object({
     ])
     .optional(),
 
+  minRating: z.coerce
+    .number()
+    .min(0)
+    .max(5)
+    .optional(),
+
   sort: z.string().optional(),
 });
 
