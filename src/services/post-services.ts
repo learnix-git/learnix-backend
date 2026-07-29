@@ -141,6 +141,7 @@ export class PostService {
 
           tutor: {
             select: {
+              id: true,
               rating: true,
               reviews: true,
 

@@ -7,6 +7,7 @@ import { generate } from '../utils/jwt';
 import { OAuth2Client } from 'google-auth-library';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
+import { generateAlias } from '../utils/alias';
 dotenv.config();
 
 import nodemailer from "nodemailer";
@@ -63,6 +64,7 @@ export class AuthService {
           role,
           dob: data.dob ? new Date(data.dob) : null,
           phone: data.phone ?? null,
+          alias: generateAlias(data.name),
         },
       });
 
@@ -148,6 +150,7 @@ export class AuthService {
             avatar: payload.picture || null,
             provider: "google",
             password: crypto.randomBytes(32).toString('hex'),
+            alias: generateAlias(payload.name || "Người dùng Google"),
             role: "STUDENT",
           },
         });

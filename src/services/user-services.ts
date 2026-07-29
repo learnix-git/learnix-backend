@@ -153,12 +153,18 @@ export class UserService {
   }
 
   // Logic lấy thông tin công khai của gia sư
-  static async get_tutor_profile(userId: string) {
-    const tutor = await prisma.tutor.findUnique({
-      where: { user: userId },
+  static async get_tutor_profile(idOrUserId: string) {
+    const tutor = await prisma.tutor.findFirst({
+      where: {
+        OR: [
+          { user: idOrUserId },
+          { id: idOrUserId },
+          { account: { alias: idOrUserId } }
+        ]
+      },
       select: {
         id: true, bio: true, level: true, major: true, school: true, exp: true,
-        rate: true, modes: true, city: true, district: true,
+        rate: true, modes: true, city: true, ward: true,
         rating: true, reviews: true,
         account: {
           select: { name: true, alias: true, avatar: true, gender: true },
@@ -172,6 +178,10 @@ export class UserService {
         },
         jobs: {
           select: { title: true, place: true, start: true, end: true, desc: true },
+        },
+        posts: {
+          where: { status: 'OPEN' },
+          select: { id: true, title: true, from: true, to: true, unit: true, created: true },
         },
       },
     });
