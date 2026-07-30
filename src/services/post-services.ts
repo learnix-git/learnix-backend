@@ -40,6 +40,77 @@ export class PostService {
     return tutor;
   }
 
+  // Hàm lấy danh sách bài đăng theo tutor
+  static async get_my_posts(userId: string, filter: {
+    page: number;
+    limit: number;
+    sort?: "newest" | "oldest" | "price-desc" | "price-asc";
+    status?: State;
+    search?: string;
+  }) {
+    const tutor = await this.get_tutor(userId);
+
+    const where: Record<string, any> = {
+      owner: tutor.id,
+    };
+
+    if (filter.search) {
+      where.title = { contains: filter.search, mode: "insensitive" };
+    }
+
+    if (filter.status) {
+      where.status = filter.status;
+    }
+
+    const [total, rows, counts] = await Promise.all([
+      prisma.post.count({ where }),
+      prisma.post.findMany({
+        where,
+        include: {
+          topics: {
+            include: {
+              topic: { select: { name: true, slug: true } }
+            }
+          },
+          tutor: {
+            select: {
+              account: { select: { name: true, alias: true, avatar: true } }
+            }
+          }
+        },
+        orderBy: (() => {
+          if (filter.sort === "oldest") return { created: "asc" };
+          if (filter.sort === "price-desc") return { from: "desc" };
+          if (filter.sort === "price-asc") return { from: "asc" };
+          return { created: "desc" };
+        })(),
+        skip: (filter.page - 1) * filter.limit,
+        take: filter.limit,
+      }),
+      prisma.post.groupBy({
+        by: ['status'],
+        where: { owner: tutor.id },
+        _count: { _all: true }
+      })
+    ]);
+
+    const stats: Record<string, number> = {
+      totalPosts: counts.reduce((acc, curr) => acc + curr._count._all, 0)
+    };
+    counts.forEach(c => {
+      stats[c.status] = c._count._all;
+    });
+
+    return {
+      items: rows,
+      total,
+      page: filter.page,
+      limit: filter.limit,
+      totalPages: Math.ceil(total / filter.limit),
+      stats,
+    };
+  }
+
   // Hàm lấy danh sách bài đăng
   static async get_posts(filter: {
     page: number;

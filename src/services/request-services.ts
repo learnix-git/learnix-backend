@@ -225,6 +225,74 @@ export class RequestService {
     };
   }
 
+  // Hàm lấy danh sách yêu cầu của tôi
+  static async get_my_requests(userId: string, filter: {
+    page: number;
+    limit: number;
+    sort?: "newest" | "highest_price";
+    status?: State;
+    search?: string;
+  }) {
+    const student = await this.get_student(userId);
+
+    const where: Record<string, any> = {
+      learner: student.id,
+    };
+
+    if (filter.search) {
+      where.title = { contains: filter.search, mode: "insensitive" };
+    }
+
+    if (filter.status) {
+      where.status = filter.status;
+    }
+
+    const [total, rows, counts] = await Promise.all([
+      prisma.request.count({ where }),
+      prisma.request.findMany({
+        where,
+        include: {
+          topics: {
+            include: {
+              topic: { select: { name: true, slug: true } }
+            }
+          },
+          student: {
+            select: {
+              account: { select: { name: true, alias: true, avatar: true } }
+            }
+          }
+        },
+        orderBy: filter.sort === "highest_price" ? { from: "desc" } : { created: "desc" },
+        skip: (filter.page - 1) * filter.limit,
+        take: filter.limit,
+      }),
+      // Get counts grouped by status
+      prisma.request.groupBy({
+        by: ['status'],
+        where: { learner: student.id },
+        _count: { _all: true }
+      })
+    ]);
+
+    const stats: Record<string, number> = {
+      totalRequests: counts.reduce((acc, curr) => acc + curr._count._all, 0)
+    };
+
+    counts.forEach(c => {
+      stats[c.status] = c._count._all;
+    });
+
+    return {
+      items: rows,
+      total,
+      page: filter.page,
+      limit: filter.limit,
+      totalPages: Math.ceil(total / filter.limit),
+      stats,
+    };
+  }
+
   // Hàm lấy chi tiết 1 yêu cầu
   static async get_request(requestId: string) {
     const request = await prisma.request.findUnique({

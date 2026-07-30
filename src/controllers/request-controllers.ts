@@ -31,6 +31,35 @@ export class RequestController {
     }
   }
 
+  static async get_my_requests(req: Request, res: Response) {
+    try {
+      const userId = res.locals.user.id;
+      // Re-use the GetRequestsSchema or parse simple query params manually
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const sort = req.query.sort as "newest" | "highest_price" | undefined;
+      const status = req.query.status as any;
+      const search = req.query.search as string | undefined;
+
+      const requests = await RequestService.get_my_requests(
+        userId,
+        { page, limit, sort, status, search }
+      );
+
+      res.status(200).json({
+        code: 200,
+        data: requests,
+      });
+    } catch (error: any) {
+      res.status(400).json({
+        code: 400,
+        message:
+          error.message ||
+          "Không thể lấy danh sách yêu cầu của tôi!",
+      });
+    }
+  }
+
   static async get_request(
     req: Request<{ id: string }>,
     res: Response

@@ -5,6 +5,7 @@ import { compel, extract } from "../middlewares/auth-middlewares";
 const router = Router();
 
 // GET
+router.get('/my', compel, PostController.get_my_posts);
 router.get('/', extract, PostController.get_posts);
 router.get('/:id', extract, PostController.get_post);
 

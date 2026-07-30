@@ -5,6 +5,7 @@ import { compel, extract } from "../middlewares/auth-middlewares";
 const router = Router();
 
 // GET
+router.get('/my', compel, RequestController.get_my_requests);
 router.get('/', extract, RequestController.get_requests);
 router.get('/:id', extract, RequestController.get_request);
 
