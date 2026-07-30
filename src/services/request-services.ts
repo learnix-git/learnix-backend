@@ -52,10 +52,43 @@ export class RequestService {
     district?: string;
     minBudget?: number;
     maxBudget?: number;
-  }) {
+    ward?: string;
+    sort?: "newest" | "highest_price";
+    type?: "match" | "all";
+  }, userId?: string) {
     const where: Record<string, any> = {
       status: State.OPEN,
     };
+
+    if (filter.type === "match" && userId) {
+      const tutor = await prisma.tutor.findUnique({
+        where: { user: userId },
+        include: { skills: true }
+      });
+
+      if (tutor) {
+        const orConditions: any[] = [];
+        const tutorTopicIds = tutor.skills.map((s) => s.topic).filter(Boolean);
+        
+        if (tutorTopicIds.length > 0) {
+          orConditions.push({
+            topics: {
+              some: {
+                subject: { in: tutorTopicIds }
+              }
+            }
+          });
+        }
+        
+        if (tutor.city) {
+          orConditions.push({ city: tutor.city });
+        }
+        
+        if (orConditions.length > 0) {
+          where.OR = orConditions;
+        }
+      }
+    }
 
     if (filter.topics && filter.topics.length > 0) {
       const subjectIds = filter.topics.map(t => t.subject).filter(Boolean);
@@ -164,8 +197,27 @@ export class RequestService {
       }),
     ]);
 
+    let savedRequestIds = new Set<string>();
+    if (userId) {
+      try {
+        const tutor = await prisma.tutor.findUnique({ where: { user: userId } });
+        if (tutor && rows.length > 0) {
+          const saved = await prisma.savedRequest.findMany({
+            where: {
+              owner: tutor.id,
+              need: { in: rows.map(r => r.id) }
+            },
+            select: { need: true }
+          });
+          saved.forEach(s => savedRequestIds.add(s.need));
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+
     return {
-      items: rows,
+      items: rows.map(r => ({ ...r, saved: savedRequestIds.has(r.id) })),
       total,
       page: filter.page,
       limit: filter.limit,

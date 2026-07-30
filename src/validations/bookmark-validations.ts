@@ -14,6 +14,8 @@ export const GetBookmarksSchema = z.object({
     .min(1, "Limit tối thiểu là 1")
     .max(50, "Limit tối đa là 50")
     .default(20),
+
+  type: z.enum(["post", "request"]).optional().default("request"),
 });
 
 export type GetBookmarksData = z.infer<typeof GetBookmarksSchema>;

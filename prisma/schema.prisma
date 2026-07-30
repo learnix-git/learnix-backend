@@ -121,6 +121,7 @@ model User {
   audits      Audit[]
   payments    Payment[]
   savedPosts  SavedPost[]
+  savedRequests SavedRequest[]
 
   @@index([role, active])
   @@index([created])
@@ -180,7 +181,6 @@ model Tutor {
   follows Follow[]
   degrees Degree[]
   jobs    History[]
-  marks   SavedRequest[]
 
   @@index([status, rating])
   @@index([city])
@@ -364,15 +364,15 @@ model RequestSubject {
 
 model SavedRequest {
   id      String   @id @default(cuid())
-  owner   String
+  user    String
   need    String
   created DateTime @default(now())
 
-  tutor   Tutor   @relation(fields: [owner], references: [id], onDelete: Cascade)
+  account User    @relation(fields: [user], references: [id], onDelete: Cascade)
   request Request @relation(fields: [need], references: [id], onDelete: Cascade)
 
-  @@unique([owner, need])
-  @@index([owner])
+  @@unique([user, need])
+  @@index([user])
 }
 
 model Bid {

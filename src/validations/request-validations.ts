@@ -38,6 +38,8 @@ export const GetRequestsSchema = z.object({
     .number()
     .min(0, "Ngân sách không hợp lệ")
     .optional(),
+
+  type: z.enum(["match", "all"]).optional(),
 });
 
 export type GetRequestsData = z.infer<typeof GetRequestsSchema>;

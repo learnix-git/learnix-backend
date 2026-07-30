@@ -10,9 +10,11 @@ export class RequestController {
   static async get_requests(req: Request, res: Response) {
     try {
       const validated = GetRequestsSchema.parse(req.query);
+      const userId = res.locals.user?.id;
 
       const requests = await RequestService.get_requests(
-        validated
+        validated,
+        userId
       );
 
       res.status(200).json({

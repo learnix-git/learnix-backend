@@ -6,6 +6,7 @@ import {
 } from '../validations/bookmark-validations';
 
 export class BookmarkController {
+  // Lấy danh sách bookmark (phân trang và theo type)
   static async get_bookmarks(
     req: Request,
     res: Response
@@ -18,7 +19,8 @@ export class BookmarkController {
       const bookmarks = await BookmarkService.get_bookmarks(
         userId,
         validated.page,
-        validated.limit
+        validated.limit,
+        validated.type as "post" | "request"
       );
 
       res.status(200).json({
@@ -35,6 +37,7 @@ export class BookmarkController {
     }
   }
 
+  // Tạo mới bookmark (Post hoặc Request)
   static async create_bookmark(
     req: Request,
     res: Response
@@ -46,9 +49,9 @@ export class BookmarkController {
 
       let bookmark;
       if (validated.requestId) {
-        bookmark = await BookmarkService.create_bookmark(userId, validated.requestId);
+        bookmark = await BookmarkService.create_request_bookmark(userId, validated.requestId);
       } else if (validated.postId) {
-        bookmark = await BookmarkService.bookmark_post(userId, validated.postId);
+        bookmark = await BookmarkService.create_post_bookmark(userId, validated.postId);
       } else {
         throw new Error("Dữ liệu không hợp lệ!");
       }
@@ -67,6 +70,7 @@ export class BookmarkController {
     }
   }
 
+  // Bỏ lưu bookmark (Post hoặc Request)
   static async delete_bookmark(
     req: Request<{ id: string }, any, any, { type?: string }>,
     res: Response
@@ -77,13 +81,13 @@ export class BookmarkController {
       const { type } = req.query;
 
       if (type === 'post') {
-        await BookmarkService.delete_bookmark_post(userId, id);
+        await BookmarkService.delete_post_bookmark(userId, id);
       } else if (type === 'request') {
-        await BookmarkService.delete_bookmark(userId, id);
+        await BookmarkService.delete_request_bookmark(userId, id);
       } else {
         // Fallback: xoá ở cả 2 bảng nếu không truyền type
-        await BookmarkService.delete_bookmark(userId, id);
-        await BookmarkService.delete_bookmark_post(userId, id);
+        await BookmarkService.delete_request_bookmark(userId, id);
+        await BookmarkService.delete_post_bookmark(userId, id);
       }
 
       res.status(200).json({
