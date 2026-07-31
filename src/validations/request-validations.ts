@@ -15,19 +15,33 @@ export const GetRequestsSchema = z.object({
     .max(50, "Limit tối đa là 50")
     .default(20),
 
-  topics: z.any().optional(),
+  topics: z
+    .any()
+    .optional(),
 
   level: z
-    .enum(["PRIMARY", "MIDDLE", "HIGH", "ALL"])
+    .enum([
+      "PRIMARY",
+      "MIDDLE",
+      "HIGH",
+      "ALL",
+    ])
     .optional(),
 
-  grades: z.any().optional(),
+  grades: z
+    .any()
+    .optional(),
 
   mode: z
-    .enum(["ONLINE", "OFFLINE"])
+    .enum([
+      "ONLINE",
+      "OFFLINE",
+    ])
     .optional(),
 
-  city: z.string().optional(),
+  city: z
+    .string()
+    .optional(),
 
   minBudget: z.coerce
     .number()
@@ -39,7 +53,12 @@ export const GetRequestsSchema = z.object({
     .min(0, "Ngân sách không hợp lệ")
     .optional(),
 
-  type: z.enum(["match", "all"]).optional(),
+  type: z
+    .enum([
+      "match",
+      "all",
+    ])
+    .optional(),
 });
 
 export type GetRequestsData = z.infer<typeof GetRequestsSchema>;
@@ -49,8 +68,13 @@ export const CreateRequestSchema = z.object({
   topics: z
     .array(
       z.object({
-        subject: z.string().optional(),
-        custom: z.string().optional(),
+        subject: z
+          .string()
+          .optional(),
+
+        custom: z
+          .string()
+          .optional(),
       })
     )
     .min(1, "Vui lòng chọn ít nhất 1 môn học"),
@@ -66,15 +90,29 @@ export const CreateRequestSchema = z.object({
     .max(5000, "Mô tả tối đa 5000 ký tự"),
 
   level: z
-    .enum(["PRIMARY", "MIDDLE", "HIGH", "ALL"])
+    .enum([
+      "PRIMARY",
+      "MIDDLE",
+      "HIGH",
+      "ALL",
+    ])
     .optional()
     .default("ALL"),
 
   grades: z
-    .array(z.number().int().min(1).max(12))
+    .array(
+      z
+        .number()
+        .int()
+        .min(1)
+        .max(12)
+    )
     .min(1, "Vui lòng chọn ít nhất 1 khối lớp"),
 
-  mode: z.enum(["ONLINE", "OFFLINE"]),
+  mode: z.enum([
+    "ONLINE",
+    "OFFLINE",
+  ]),
 
   city: z
     .string()
@@ -111,8 +149,10 @@ export const CreateRequestSchema = z.object({
     .number()
     .min(1000, "Mức giá tối thiểu 1.000đ"),
 
-  unit: z
-    .enum(["PER_SESSION", "PER_MONTH"]),
+  unit: z.enum([
+    "PER_SESSION",
+    "PER_MONTH",
+  ]),
 
   count: z
     .number()
@@ -127,7 +167,11 @@ export const CreateRequestSchema = z.object({
     .optional(),
 
   venue: z
-    .enum(["STUDENT", "TUTOR", "BOTH"])
+    .enum([
+      "STUDENT",
+      "TUTOR",
+      "BOTH",
+    ])
     .optional(),
 
   flexible: z
@@ -135,11 +179,21 @@ export const CreateRequestSchema = z.object({
     .optional(),
 
   days: z
-    .array(z.number().int().min(2).max(8))
+    .array(
+      z
+        .number()
+        .int()
+        .min(2)
+        .max(8)
+    )
     .optional(),
 
   slot: z
-    .enum(["MORNING", "AFTERNOON", "EVENING"])
+    .enum([
+      "MORNING",
+      "AFTERNOON",
+      "EVENING",
+    ])
     .optional(),
 
   startTime: z
@@ -158,7 +212,12 @@ export const UpdateRequestSchema = CreateRequestSchema
   .partial()
   .extend({
     status: z
-      .enum(["OPEN", "DONE", "CANCEL", "HOLD"])
+      .enum([
+        "OPEN",
+        "DONE",
+        "CANCEL",
+        "HOLD",
+      ])
       .optional(),
   });
 

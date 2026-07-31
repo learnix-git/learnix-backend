@@ -1,8 +1,8 @@
-// GET    /api/v1/requests 
+// GET    /api/v1/requests
 // GET    /api/v1/requests/:id
 // POST   /api/v1/requests
 // PATCH  /api/v1/requests/:id
-// DELETE /api/v1/requests/:id 
+// DELETE /api/v1/requests/:id
 
 import {
   PrismaClient,
@@ -15,6 +15,7 @@ import {
 } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import dotenv from 'dotenv';
+import { generate } from '../utils/alias';
 
 dotenv.config();
 
@@ -22,7 +23,9 @@ const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL!,
 });
 
-const prisma = new PrismaClient({ adapter });
+const prisma = new PrismaClient({
+  adapter,
+});
 
 export class RequestService {
   // Hàm quy đổi userId sang studentId
@@ -34,56 +37,75 @@ export class RequestService {
     });
 
     if (!student) {
-      throw new Error("Bạn chưa có hồ sơ học sinh/phụ huynh!");
+      throw new Error(
+        "Bạn chưa có hồ sơ học sinh/phụ huynh!"
+      );
     }
 
     return student;
   }
 
   // Hàm lấy danh sách yêu cầu
-  static async get_requests(filter: {
-    page: number;
-    limit: number;
-    topics?: { subject?: string; custom?: string }[];
-    level?: Level;
-    grades?: number[];
-    mode?: Mode;
-    city?: string;
-    district?: string;
-    minBudget?: number;
-    maxBudget?: number;
-    ward?: string;
-    sort?: "newest" | "highest_price";
-    type?: "match" | "all";
-  }, userId?: string) {
+  static async get_requests(
+    filter: {
+      page: number;
+      limit: number;
+      topics?: {
+        subject?: string;
+        custom?: string;
+      }[];
+      level?: Level;
+      grades?: number[];
+      mode?: Mode;
+      city?: string;
+      district?: string;
+      minBudget?: number;
+      maxBudget?: number;
+      ward?: string;
+      sort?: "newest" | "highest_price";
+      type?: "match" | "all";
+    },
+    userId?: string
+  ) {
     const where: Record<string, any> = {
       status: State.OPEN,
     };
 
     if (filter.type === "match" && userId) {
       const tutor = await prisma.tutor.findUnique({
-        where: { user: userId },
-        include: { skills: true }
+        where: {
+          user: userId,
+        },
+        include: {
+          skills: true,
+        },
       });
 
       if (tutor) {
         const orConditions: any[] = [];
-        const tutorTopicIds = tutor.skills.map((s) => s.topic).filter(Boolean);
-        
+
+        const tutorTopicIds = tutor.skills
+          .map((s) => s.topic)
+          .filter(Boolean);
+
         if (tutorTopicIds.length > 0) {
           orConditions.push({
             topics: {
               some: {
-                subject: { in: tutorTopicIds }
-              }
-            }
+                subject: {
+                  in: tutorTopicIds,
+                },
+              },
+            },
           });
         }
-        
+
         if (tutor.city) {
-          orConditions.push({ city: tutor.city });
+          orConditions.push({
+            city: tutor.city,
+          });
         }
-        
+
         if (orConditions.length > 0) {
           where.OR = orConditions;
         }
@@ -91,14 +113,27 @@ export class RequestService {
     }
 
     if (filter.topics && filter.topics.length > 0) {
-      const subjectIds = filter.topics.map(t => t.subject).filter(Boolean);
-      const customTopics = filter.topics.map(t => t.custom).filter(Boolean);
+      const subjectIds = filter.topics
+        .map((t) => t.subject)
+        .filter(Boolean);
+
+      const customTopics = filter.topics
+        .map((t) => t.custom)
+        .filter(Boolean);
 
       where.topics = {
         some: {
           OR: [
-            { subject: { in: subjectIds } },
-            { custom: { in: customTopics } },
+            {
+              subject: {
+                in: subjectIds,
+              },
+            },
+            {
+              custom: {
+                in: customTopics,
+              },
+            },
           ],
         },
       };
@@ -108,7 +143,10 @@ export class RequestService {
       where.level = filter.level;
     }
 
-    if (filter.grades && filter.grades.length > 0) {
+    if (
+      filter.grades &&
+      filter.grades.length > 0
+    ) {
       where.grades = {
         hasSome: filter.grades,
       };
@@ -130,27 +168,28 @@ export class RequestService {
       filter.minBudget !== undefined ||
       filter.maxBudget !== undefined
     ) {
-      // Logic lọc:
-      // Tìm các request mà khoảng [from, to] giao với khoảng [minBudget, maxBudget]
-      
       const priceFilter: any[] = [];
-      
+
       if (filter.minBudget !== undefined) {
         priceFilter.push({
-          to: { gte: filter.minBudget }
+          to: {
+            gte: filter.minBudget,
+          },
         });
       }
-      
+
       if (filter.maxBudget !== undefined) {
         priceFilter.push({
-          from: { lte: filter.maxBudget }
+          from: {
+            lte: filter.maxBudget,
+          },
         });
       }
-      
+
       if (priceFilter.length > 0) {
         where.AND = [
           ...(where.AND || []),
-          ...priceFilter
+          ...priceFilter,
         ];
       }
     }
@@ -179,6 +218,7 @@ export class RequestService {
             select: {
               account: {
                 select: {
+                  id: true,
                   name: true,
                   alias: true,
                   avatar: true,
@@ -198,18 +238,31 @@ export class RequestService {
     ]);
 
     let savedRequestIds = new Set<string>();
+
     if (userId) {
       try {
-        const tutor = await prisma.tutor.findUnique({ where: { user: userId } });
+        const tutor = await prisma.tutor.findUnique({
+          where: {
+            user: userId,
+          },
+        });
+
         if (tutor && rows.length > 0) {
           const saved = await prisma.savedRequest.findMany({
             where: {
-              owner: tutor.id,
-              need: { in: rows.map(r => r.id) }
+              user: userId,
+              need: {
+                in: rows.map((r) => r.id),
+              },
             },
-            select: { need: true }
+            select: {
+              need: true,
+            },
           });
-          saved.forEach(s => savedRequestIds.add(s.need));
+
+          saved.forEach((s) =>
+            savedRequestIds.add(s.need)
+          );
         }
       } catch (e) {
         // ignore
@@ -217,22 +270,30 @@ export class RequestService {
     }
 
     return {
-      items: rows.map(r => ({ ...r, saved: savedRequestIds.has(r.id) })),
+      items: rows.map((r) => ({
+        ...r,
+        saved: savedRequestIds.has(r.id),
+      })),
       total,
       page: filter.page,
       limit: filter.limit,
-      totalPages: Math.ceil(total / filter.limit),
+      totalPages: Math.ceil(
+        total / filter.limit
+      ),
     };
   }
 
   // Hàm lấy danh sách yêu cầu của tôi
-  static async get_my_requests(userId: string, filter: {
-    page: number;
-    limit: number;
-    sort?: "newest" | "highest_price";
-    status?: State;
-    search?: string;
-  }) {
+  static async get_my_requests(
+    userId: string,
+    filter: {
+      page: number;
+      limit: number;
+      sort?: "newest" | "highest_price";
+      status?: State;
+      search?: string;
+    }
+  ) {
     const student = await this.get_student(userId);
 
     const where: Record<string, any> = {
@@ -240,7 +301,10 @@ export class RequestService {
     };
 
     if (filter.search) {
-      where.title = { contains: filter.search, mode: "insensitive" };
+      where.title = {
+        contains: filter.search,
+        mode: "insensitive",
+      };
     }
 
     if (filter.status) {
@@ -248,38 +312,71 @@ export class RequestService {
     }
 
     const [total, rows, counts] = await Promise.all([
-      prisma.request.count({ where }),
+      prisma.request.count({
+        where,
+      }),
+
       prisma.request.findMany({
         where,
+
         include: {
           topics: {
             include: {
-              topic: { select: { name: true, slug: true } }
-            }
+              topic: {
+                select: {
+                  name: true,
+                  slug: true,
+                },
+              },
+            },
           },
+
           student: {
             select: {
-              account: { select: { name: true, alias: true, avatar: true } }
-            }
-          }
+              account: {
+                select: {
+                  id: true,
+                  name: true,
+                  alias: true,
+                  avatar: true,
+                },
+              },
+            },
+          },
         },
-        orderBy: filter.sort === "highest_price" ? { from: "desc" } : { created: "desc" },
+
+        orderBy:
+          filter.sort === "highest_price"
+            ? {
+              from: "desc",
+            }
+            : {
+              created: "desc",
+            },
+
         skip: (filter.page - 1) * filter.limit,
         take: filter.limit,
       }),
-      // Get counts grouped by status
+
       prisma.request.groupBy({
-        by: ['status'],
-        where: { learner: student.id },
-        _count: { _all: true }
-      })
+        by: ["status"],
+        where: {
+          learner: student.id,
+        },
+        _count: {
+          _all: true,
+        },
+      }),
     ]);
 
     const stats: Record<string, number> = {
-      totalRequests: counts.reduce((acc, curr) => acc + curr._count._all, 0)
+      totalRequests: counts.reduce(
+        (acc, curr) => acc + curr._count._all,
+        0
+      ),
     };
 
-    counts.forEach(c => {
+    counts.forEach((c) => {
       stats[c.status] = c._count._all;
     });
 
@@ -288,16 +385,25 @@ export class RequestService {
       total,
       page: filter.page,
       limit: filter.limit,
-      totalPages: Math.ceil(total / filter.limit),
+      totalPages: Math.ceil(
+        total / filter.limit
+      ),
       stats,
     };
   }
 
   // Hàm lấy chi tiết 1 yêu cầu
   static async get_request(requestId: string) {
-    const request = await prisma.request.findUnique({
+    const request = await prisma.request.findFirst({
       where: {
-        id: requestId,
+        OR: [
+          {
+            id: requestId,
+          },
+          {
+            alias: requestId,
+          },
+        ],
       },
 
       include: {
@@ -320,6 +426,7 @@ export class RequestService {
 
             account: {
               select: {
+                id: true,
                 name: true,
                 alias: true,
                 avatar: true,
@@ -337,11 +444,14 @@ export class RequestService {
     return request;
   }
 
-    // Hàm tạo yêu cầu
+  // Hàm tạo yêu cầu
   static async create_request(
     userId: string,
     data: {
-      topics: { subject?: string; custom?: string }[];
+      topics: {
+        subject?: string;
+        custom?: string;
+      }[];
       title: string;
       desc: string;
       level?: Level;
@@ -366,10 +476,16 @@ export class RequestService {
   ) {
     const student = await this.get_student(userId);
 
+    const alias = generate(
+      data.title || "yeu-cau"
+    );
+
     const request = await prisma.request.create({
       data: {
         learner: student.id,
+        alias,
         ...data,
+
         topics: {
           create: data.topics.map((t) => ({
             subject: t.subject || null,
@@ -418,7 +534,10 @@ export class RequestService {
       },
     });
 
-    if (!request || request.learner !== student.id) {
+    if (
+      !request ||
+      request.learner !== student.id
+    ) {
       throw new Error("Yêu cầu không tồn tại!");
     }
 
@@ -476,14 +595,37 @@ export class RequestService {
       payload.unit = data.unit;
     }
 
-    if (data.count !== undefined) payload.count = data.count;
-    if (data.flexible !== undefined) payload.flexible = data.flexible;
-    if (data.days !== undefined) payload.days = data.days;
-    if (data.slot !== undefined) payload.slot = data.slot;
-    if (data.startTime !== undefined) payload.startTime = data.startTime;
-    if (data.endTime !== undefined) payload.endTime = data.endTime;
-    if (data.venue !== undefined) payload.venue = data.venue;
-    if (data.status !== undefined) payload.status = data.status;
+    if (data.count !== undefined) {
+      payload.count = data.count;
+    }
+
+    if (data.flexible !== undefined) {
+      payload.flexible = data.flexible;
+    }
+
+    if (data.days !== undefined) {
+      payload.days = data.days;
+    }
+
+    if (data.slot !== undefined) {
+      payload.slot = data.slot;
+    }
+
+    if (data.startTime !== undefined) {
+      payload.startTime = data.startTime;
+    }
+
+    if (data.endTime !== undefined) {
+      payload.endTime = data.endTime;
+    }
+
+    if (data.venue !== undefined) {
+      payload.venue = data.venue;
+    }
+
+    if (data.status !== undefined) {
+      payload.status = data.status;
+    }
 
     const updated = await prisma.request.update({
       where: {
@@ -509,7 +651,10 @@ export class RequestService {
       },
     });
 
-    if (!request || request.learner !== student.id) {
+    if (
+      !request ||
+      request.learner !== student.id
+    ) {
       throw new Error("Yêu cầu không tồn tại!");
     }
 

@@ -12,9 +12,10 @@ import {
   Unit,
   Slot,
   State,
-} from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
-import dotenv from 'dotenv';
+} from "@prisma/client";
+
+import { PrismaPg } from "@prisma/adapter-pg";
+import dotenv from "dotenv";
 
 dotenv.config();
 
@@ -22,11 +23,15 @@ const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL!,
 });
 
-const prisma = new PrismaClient({ adapter });
+const prisma = new PrismaClient({
+  adapter,
+});
 
 export class PostService {
   // Hàm quy đổi userId sang tutorId
-  private static async get_tutor(userId: string) {
+  private static async get_tutor(
+    userId: string
+  ) {
     const tutor = await prisma.tutor.findUnique({
       where: {
         user: userId,
@@ -34,20 +39,25 @@ export class PostService {
     });
 
     if (!tutor) {
-      throw new Error("Bạn chưa đăng ký hồ sơ gia sư!");
+      throw new Error(
+        "Bạn chưa đăng ký hồ sơ gia sư!"
+      );
     }
 
     return tutor;
   }
 
   // Hàm lấy danh sách bài đăng theo tutor
-  static async get_my_posts(userId: string, filter: {
-    page: number;
-    limit: number;
-    sort?: "newest" | "oldest" | "price-desc" | "price-asc";
-    status?: State;
-    search?: string;
-  }) {
+  static async get_my_posts(
+    userId: string,
+    filter: {
+      page: number;
+      limit: number;
+      sort?: "newest" | "oldest" | "price-desc" | "price-asc";
+      status?: State;
+      search?: string;
+    }
+  ) {
     const tutor = await this.get_tutor(userId);
 
     const where: Record<string, any> = {
@@ -55,7 +65,10 @@ export class PostService {
     };
 
     if (filter.search) {
-      where.title = { contains: filter.search, mode: "insensitive" };
+      where.title = {
+        contains: filter.search,
+        mode: "insensitive",
+      };
     }
 
     if (filter.status) {
@@ -63,41 +76,80 @@ export class PostService {
     }
 
     const [total, rows, counts] = await Promise.all([
-      prisma.post.count({ where }),
+      prisma.post.count({
+        where,
+      }),
+
       prisma.post.findMany({
         where,
+
         include: {
           topics: {
             include: {
-              topic: { select: { name: true, slug: true } }
-            }
+              topic: {
+                select: {
+                  name: true,
+                  slug: true,
+                },
+              },
+            },
           },
+
           tutor: {
             select: {
-              account: { select: { name: true, alias: true, avatar: true } }
-            }
-          }
+              account: {
+                select: {
+                  id: true,
+                  name: true,
+                  alias: true,
+                  avatar: true,
+                },
+              },
+            },
+          },
         },
+
         orderBy: (() => {
-          if (filter.sort === "oldest") return { created: "asc" };
-          if (filter.sort === "price-desc") return { from: "desc" };
-          if (filter.sort === "price-asc") return { from: "asc" };
+          if (filter.sort === "oldest") {
+            return { created: "asc" };
+          }
+
+          if (filter.sort === "price-desc") {
+            return { from: "desc" };
+          }
+
+          if (filter.sort === "price-asc") {
+            return { from: "asc" };
+          }
+
           return { created: "desc" };
         })(),
+
         skip: (filter.page - 1) * filter.limit,
         take: filter.limit,
       }),
+
       prisma.post.groupBy({
-        by: ['status'],
-        where: { owner: tutor.id },
-        _count: { _all: true }
-      })
+        by: ["status"],
+
+        where: {
+          owner: tutor.id,
+        },
+
+        _count: {
+          _all: true,
+        },
+      }),
     ]);
 
     const stats: Record<string, number> = {
-      totalPosts: counts.reduce((acc, curr) => acc + curr._count._all, 0)
+      totalPosts: counts.reduce(
+        (acc, curr) => acc + curr._count._all,
+        0
+      ),
     };
-    counts.forEach(c => {
+
+    counts.forEach((c) => {
       stats[c.status] = c._count._all;
     });
 
@@ -112,20 +164,23 @@ export class PostService {
   }
 
   // Hàm lấy danh sách bài đăng
-  static async get_posts(filter: {
-    page: number;
-    limit: number;
-    topic?: string;
-    level?: Level;
-    grade?: number;
-    mode?: Mode;
-    city?: string;
-    ward?: string;
-    minPrice?: number;
-    maxPrice?: number;
-    unit?: Unit;
-    sort?: string;
-  }, userId?: string) {
+  static async get_posts(
+    filter: {
+      page: number;
+      limit: number;
+      topic?: string;
+      level?: Level;
+      grade?: number;
+      mode?: Mode;
+      city?: string;
+      ward?: string;
+      minPrice?: number;
+      maxPrice?: number;
+      unit?: Unit;
+      sort?: string;
+    },
+    userId?: string
+  ) {
     const where: Record<string, any> = {
       status: State.OPEN,
     };
@@ -176,8 +231,6 @@ export class PostService {
       };
     }
 
-
-
     const [total, rows] = await Promise.all([
       prisma.post.count({
         where,
@@ -218,6 +271,7 @@ export class PostService {
 
               account: {
                 select: {
+                  id: true,
                   name: true,
                   alias: true,
                   avatar: true,
@@ -225,19 +279,38 @@ export class PostService {
               },
             },
           },
-          ...(userId ? {
-            savedBy: {
-              where: { user: userId },
-              select: { id: true }
+
+          ...(userId
+            ? {
+              savedBy: {
+                where: {
+                  user: userId,
+                },
+                select: {
+                  id: true,
+                },
+              },
             }
-          } : {})
+            : {}),
         },
 
-      orderBy: (() => {
-          if (filter.sort === "oldest") return { created: "asc" };
-          if (filter.sort === "rating-high") return { tutor: { rating: "desc" } };
-          if (filter.sort === "price-low") return { from: "asc" };
-          if (filter.sort === "price-high") return { from: "desc" };
+        orderBy: (() => {
+          if (filter.sort === "oldest") {
+            return { created: "asc" };
+          }
+
+          if (filter.sort === "rating-high") {
+            return { tutor: { rating: "desc" } };
+          }
+
+          if (filter.sort === "price-low") {
+            return { from: "asc" };
+          }
+
+          if (filter.sort === "price-high") {
+            return { from: "desc" };
+          }
+
           return { created: "desc" };
         })(),
 
@@ -247,7 +320,7 @@ export class PostService {
     ]);
 
     return {
-      items: rows.map(r => ({
+      items: rows.map((r) => ({
         ...r,
         saved: userId ? (r as any).savedBy?.length > 0 : false,
       })),
@@ -259,10 +332,16 @@ export class PostService {
   }
 
   // Hàm lấy chi tiết 1 bài đăng
-  static async get_post(postId: string, userId?: string) {
-    const post = await prisma.post.findUnique({
+  static async get_post(
+    postId: string,
+    userId?: string
+  ) {
+    const post = await prisma.post.findFirst({
       where: {
-        id: postId,
+        OR: [
+          { id: postId },
+          { alias: postId },
+        ],
       },
 
       include: {
@@ -302,24 +381,34 @@ export class PostService {
 
             account: {
               select: {
+                id: true,
                 name: true,
                 alias: true,
                 avatar: true,
               },
             },
           },
-          ...(userId ? {
-            savedBy: {
-              where: { user: userId },
-              select: { id: true }
-            }
-          } : {})
         },
+
+        ...(userId
+          ? {
+            savedBy: {
+              where: {
+                user: userId,
+              },
+              select: {
+                id: true,
+              },
+            },
+          }
+          : {}),
       },
     });
 
     if (!post) {
-      throw new Error("Bài đăng không tồn tại!");
+      throw new Error(
+        "Bài đăng không tồn tại!"
+      );
     }
 
     return {
@@ -433,7 +522,39 @@ export class PostService {
       },
     });
 
-    return post;
+    // Tạo alias từ tiêu đề bài đăng
+    const safeTitle = post.title || "bai-dang";
+
+    const baseSlug = safeTitle
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[đĐ]/g, "d")
+      .replace(/([^0-9a-z-\s])/g, "")
+      .replace(/(\s+)/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-+|-+$/g, "");
+
+    const shortId = post.id.substring(post.id.length - 9);
+
+    const formattedShortId = `${shortId.substring(0, 3)}-${shortId.substring(3, 6)}-${shortId.substring(6)}`;
+
+    const alias = `${baseSlug}-${formattedShortId}`;
+
+    await prisma.post.update({
+      where: {
+        id: post.id,
+      },
+
+      data: {
+        alias,
+      },
+    });
+
+    return {
+      ...post,
+      alias,
+    };
   }
 
   // Hàm sửa bài đăng
@@ -482,7 +603,9 @@ export class PostService {
     });
 
     if (!post || post.owner !== tutor.id) {
-      throw new Error("Bài đăng không tồn tại!");
+      throw new Error(
+        "Bài đăng không tồn tại!"
+      );
     }
 
     const nextFrom = data.from ?? Number(post.from);
@@ -651,7 +774,9 @@ export class PostService {
     });
 
     if (!post || post.owner !== tutor.id) {
-      throw new Error("Bài đăng không tồn tại!");
+      throw new Error(
+        "Bài đăng không tồn tại!"
+      );
     }
 
     await prisma.post.delete({

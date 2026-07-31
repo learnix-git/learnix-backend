@@ -15,17 +15,30 @@ export const GetBookmarksSchema = z.object({
     .max(50, "Limit tối đa là 50")
     .default(20),
 
-  type: z.enum(["post", "request"]).optional().default("request"),
+  type: z
+    .enum(["post", "request"])
+    .optional()
+    .default("request"),
 });
 
 export type GetBookmarksData = z.infer<typeof GetBookmarksSchema>;
 
-// Xác thực bookmark request
-export const CreateBookmarkSchema = z.object({
-  requestId: z.string().optional(),
-  postId: z.string().optional(),
-}).refine(data => data.requestId || data.postId, {
-  message: "Phải cung cấp requestId hoặc postId",
-});
+// Xác thực bookmark
+export const CreateBookmarkSchema = z
+  .object({
+    requestId: z
+      .string()
+      .optional(),
+
+    postId: z
+      .string()
+      .optional(),
+  })
+  .refine(
+    (data) => data.requestId || data.postId,
+    {
+      message: "Phải cung cấp requestId hoặc postId",
+    }
+  );
 
 export type CreateBookmarkData = z.infer<typeof CreateBookmarkSchema>;

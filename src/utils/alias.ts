@@ -1,4 +1,4 @@
-export function generateAlias(name: string): string {
+export function generate(name: string): string {
   // Convert name to slug
   const slug = name
     .toLowerCase()
@@ -11,8 +11,8 @@ export function generateAlias(name: string): string {
     .replace(/^-+|-+$/g, "");
 
   // Generate random xxx-yyy-zzz
-  const randomChars = () => Math.random().toString(36).substring(2, 5);
-  const suffix = `${randomChars()}-${randomChars()}-${randomChars()}`;
+  const random_chars = () => Math.random().toString(36).substring(2, 5);
+  const suffix = `${random_chars()}-${random_chars()}-${random_chars()}`;
 
   return `${slug}-${suffix}`;
 }

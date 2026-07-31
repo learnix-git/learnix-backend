@@ -71,7 +71,9 @@ export const GetPostsSchema = z.object({
     .max(5)
     .optional(),
 
-  sort: z.string().optional(),
+  sort: z
+    .string()
+    .optional(),
 });
 
 export type GetPostsData = z.infer<typeof GetPostsSchema>;
@@ -92,11 +94,17 @@ const TimeSlotSchema = z.object({
 
   start: z
     .string()
-    .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Giờ bắt đầu không hợp lệ (HH:MM)"),
+    .regex(
+      /^([01]\d|2[0-3]):[0-5]\d$/,
+      "Giờ bắt đầu không hợp lệ (HH:MM)"
+    ),
 
   end: z
     .string()
-    .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Giờ kết thúc không hợp lệ (HH:MM)"),
+    .regex(
+      /^([01]\d|2[0-3]):[0-5]\d$/,
+      "Giờ kết thúc không hợp lệ (HH:MM)"
+    ),
 });
 
 // Schema gốc dùng chung cho tạo/sửa bài đăng
@@ -147,10 +155,11 @@ const PostBaseSchema = z.object({
 
   grades: z
     .array(
-      z.number()
-       .int("Khối lớp không hợp lệ")
-       .min(1, "Khối lớp không hợp lệ")
-       .max(12, "Khối lớp không hợp lệ")
+      z
+        .number()
+        .int("Khối lớp không hợp lệ")
+        .min(1, "Khối lớp không hợp lệ")
+        .max(12, "Khối lớp không hợp lệ")
     )
     .min(1, "Vui lòng chọn ít nhất 1 khối lớp"),
 
@@ -236,8 +245,7 @@ export const CreatePostSchema = PostBaseSchema
       data.mode !== "OFFLINE" ||
       data.venue !== undefined,
     {
-      message:
-        "Vui lòng chọn địa điểm dạy khi chọn hình thức Offline",
+      message: "Vui lòng chọn địa điểm dạy khi chọn hình thức Offline",
       path: ["venue"],
     }
   )
@@ -252,10 +260,15 @@ export const CreatePostSchema = PostBaseSchema
       path: ["city"],
     }
   )
-  .refine((data) => data.unit !== "PER_SESSION" || data.hours !== undefined, {
-    message: "Vui lòng nhập số tiếng/buổi",
-    path: ["hours"],
-  });
+  .refine(
+    (data) =>
+      data.unit !== "PER_SESSION" ||
+      data.hours !== undefined,
+    {
+      message: "Vui lòng nhập số tiếng/buổi",
+      path: ["hours"],
+    }
+  );
 
 export type CreatePostData = z.infer<typeof CreatePostSchema>;
 

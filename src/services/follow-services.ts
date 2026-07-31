@@ -61,7 +61,6 @@ export class FollowService {
               rating: true,
               reviews: true,
               city: true,
-              district: true,
 
               account: {
                 select: {

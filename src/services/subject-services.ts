@@ -1,8 +1,8 @@
-// GET /api/v1/subjects
+// GET    /api/v1/subjects
 
-import { PrismaClient } from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
-import dotenv from 'dotenv';
+import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+import dotenv from "dotenv";
 
 dotenv.config();
 
@@ -10,15 +10,19 @@ const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL!,
 });
 
-const prisma = new PrismaClient({ adapter });
+const prisma = new PrismaClient({
+  adapter,
+});
 
 export class SubjectService {
   // Hàm lấy danh sách môn học
-  static async get_subjects(filter: {
-    page: number;
-    limit: number;
-    search?: string;
-  }) {
+  static async get_subjects(
+    filter: {
+      page: number;
+      limit: number;
+      search?: string;
+    }
+  ) {
     const where: Record<string, any> = {};
 
     if (filter.search !== undefined) {
@@ -56,7 +60,9 @@ export class SubjectService {
       total,
       page: filter.page,
       limit: filter.limit,
-      totalPages: Math.ceil(total / filter.limit),
+      totalPages: Math.ceil(
+        total / filter.limit
+      ),
     };
   }
 }

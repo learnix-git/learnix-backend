@@ -8,13 +8,14 @@ export const CreateSkillSchema = z.object({
 
   grades: z
     .array(
-      z.number().int()
+      z
+        .number()
+        .int()
     )
     .min(1, "Vui lòng chọn ít nhất 1 khối lớp"),
 });
 
 export type CreateSkillData = z.infer<typeof CreateSkillSchema>;
-
 
 // Xác thực thêm bằng cấp
 export const CreateDegreeSchema = z.object({
@@ -38,8 +39,7 @@ export const CreateDegreeSchema = z.object({
     .max(150, "Tên đơn vị cấp quá dài")
     .optional(),
 
-  year: z
-    .coerce
+  year: z.coerce
     .number()
     .int("Năm cấp không hợp lệ")
     .min(1950, "Năm cấp không hợp lệ")
@@ -48,7 +48,6 @@ export const CreateDegreeSchema = z.object({
 });
 
 export type CreateDegreeData = z.infer<typeof CreateDegreeSchema>;
-
 
 // Xác thực thêm kinh nghiệm
 export const CreateHistorySchema = z.object({
@@ -82,13 +81,11 @@ export const CreateHistorySchema = z.object({
 
 export type CreateHistoryData = z.infer<typeof CreateHistorySchema>;
 
-
 // Xác thực sửa kinh nghiệm
 export const UpdateHistorySchema =
   CreateHistorySchema.partial();
 
 export type UpdateHistoryData = z.infer<typeof UpdateHistorySchema>;
-
 
 // Xác thực cập nhật lịch dạy
 export const UpdateScheduleSchema = z.object({

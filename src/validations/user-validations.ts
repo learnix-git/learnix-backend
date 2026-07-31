@@ -1,7 +1,9 @@
 import { z } from "zod";
 
 // Trường dữ liệu chung
-const BankField = z.string().min(1, "Thiếu bankId");
+const BankField = z
+  .string()
+  .min(1, "Thiếu bankId");
 
 // Xác thực cập nhật thông tin
 export const UpdateInfoSchema = z.object({
@@ -17,7 +19,11 @@ export const UpdateInfoSchema = z.object({
     .optional(),
 
   gender: z
-    .enum(["MALE", "FEMALE", "OTHER"])
+    .enum([
+      "MALE",
+      "FEMALE",
+      "OTHER",
+    ])
     .optional(),
 
   dob: z
@@ -45,7 +51,8 @@ export const UpdateInfoSchema = z.object({
     .optional()
     .refine(
       (val) =>
-        !val || /^(0|\+84)([35789])[0-9]{8}$/.test(val),
+        !val ||
+        /^(0|\+84)([35789])[0-9]{8}$/.test(val),
       "Số điện thoại không hợp lệ"
     ),
 

@@ -5,9 +5,10 @@
 import {
   PrismaClient,
   State,
-} from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
-import dotenv from 'dotenv';
+} from "@prisma/client";
+
+import { PrismaPg } from "@prisma/adapter-pg";
+import dotenv from "dotenv";
 
 dotenv.config();
 
@@ -15,11 +16,15 @@ const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL!,
 });
 
-const prisma = new PrismaClient({ adapter });
+const prisma = new PrismaClient({
+  adapter,
+});
 
 export class ReviewService {
   // Hàm quy đổi userId sang studentId
-  private static async get_student(userId: string) {
+  private static async get_student(
+    userId: string
+  ) {
     const student = await prisma.student.findUnique({
       where: {
         user: userId,
@@ -27,14 +32,18 @@ export class ReviewService {
     });
 
     if (!student) {
-      throw new Error("Bạn chưa có hồ sơ học sinh/phụ huynh!");
+      throw new Error(
+        "Bạn chưa có hồ sơ học sinh/phụ huynh!"
+      );
     }
 
     return student;
   }
 
-  // Hàm tính lại rating trung bình + số lượng review của 1 tutor
-  private static async recalc_rating(tutorId: string) {
+  // Hàm tính lại rating trung bình + số lượng review
+  private static async recalc_rating(
+    tutorId: string
+  ) {
     const agg = await prisma.review.aggregate({
       where: {
         tutor: tutorId,
@@ -107,7 +116,9 @@ export class ReviewService {
       total,
       page,
       limit,
-      totalPages: Math.ceil(total / limit),
+      totalPages: Math.ceil(
+        total / limit
+      ),
     };
   }
 
@@ -129,7 +140,10 @@ export class ReviewService {
       },
     });
 
-    if (!contract || contract.learner !== student.id) {
+    if (
+      !contract ||
+      contract.learner !== student.id
+    ) {
       throw new Error("Hợp đồng không tồn tại!");
     }
 
@@ -147,7 +161,9 @@ export class ReviewService {
     });
 
     if (exist) {
-      throw new Error("Hợp đồng này đã được đánh giá!");
+      throw new Error(
+        "Hợp đồng này đã được đánh giá!"
+      );
     }
 
     const review = await prisma.review.create({
@@ -179,7 +195,10 @@ export class ReviewService {
       },
     });
 
-    if (!review || review.learner !== student.id) {
+    if (
+      !review ||
+      review.learner !== student.id
+    ) {
       throw new Error("Đánh giá không tồn tại!");
     }
 

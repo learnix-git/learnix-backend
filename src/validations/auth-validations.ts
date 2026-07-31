@@ -1,67 +1,101 @@
 import { z } from "zod";
 
 // ! Login validate
-export const loginSchema = z
-  .object({
-    email: z
-      .string()
-      .min(1, "Vui lòng nhập email")
-      .email("Email không hợp lệ") 
-      .max(255, "Email quá dài"),
-    password: z
-      .string()
-      .min(1, "Vui lòng nhập mật khẩu")
-      .max(64, "Mật khẩu quá dài"), 
-  });
+export const loginSchema = z.object({
+  email: z
+    .string()
+    .min(1, "Vui lòng nhập email")
+    .email("Email không hợp lệ")
+    .max(255, "Email quá dài"),
+
+  password: z
+    .string()
+    .min(1, "Vui lòng nhập mật khẩu")
+    .max(64, "Mật khẩu quá dài"),
+});
 
 export type LoginFormData = z.infer<typeof loginSchema>;
 
 // ! Register validate
 export const registerSchema = z
   .object({
-    name: z.string().min(1, "Vui lòng nhập họ tên").max(100, "Họ tên quá dài"),
-    email: z.string().min(1, "Vui lòng nhập email").email("Email không hợp lệ").max(255, "Email quá dài"),
-    role: z.enum(["TUTOR", "STUDENT", "ADMIN"]).optional().default("STUDENT"),
-    gender: z.number().min(0, "Vui lòng chọn giới tính").max(2, "Giới tính không hợp lệ"),
+    name: z
+      .string()
+      .min(1, "Vui lòng nhập họ tên")
+      .max(100, "Họ tên quá dài"),
+
+    email: z
+      .string()
+      .min(1, "Vui lòng nhập email")
+      .email("Email không hợp lệ")
+      .max(255, "Email quá dài"),
+
+    role: z
+      .enum(["TUTOR", "STUDENT", "ADMIN"])
+      .optional()
+      .default("STUDENT"),
+
+    gender: z
+      .number()
+      .min(0, "Vui lòng chọn giới tính")
+      .max(2, "Giới tính không hợp lệ"),
+
     dob: z
       .string()
       .optional()
-      .refine((val) => !val || !isNaN(Date.parse(val)), "Ngày sinh không hợp lệ")
-      .refine((val) => {
-        if (!val) return true;
-        const age = (Date.now() - new Date(val).getTime()) / (1000 * 60 * 60 * 24 * 365.25);
-        return age >= 6 && age <= 100;
-      }, "Ngày sinh không hợp lệ"),
+      .refine(
+        (val) => !val || !isNaN(Date.parse(val)),
+        "Ngày sinh không hợp lệ"
+      )
+      .refine(
+        (val) => {
+          if (!val) return true;
+
+          const age =
+            (Date.now() - new Date(val).getTime()) /
+            (1000 * 60 * 60 * 24 * 365.25);
+
+          return age >= 6 && age <= 100;
+        },
+        "Ngày sinh không hợp lệ"
+      ),
+
     phone: z
       .string()
       .optional()
-      .refine((val) => !val || /^(0|\+84)([35789])[0-9]{8}$/.test(val), "Số điện thoại không hợp lệ"),
+      .refine(
+        (val) => !val || /^(0|\+84)([35789])[0-9]{8}$/.test(val),
+        "Số điện thoại không hợp lệ"
+      ),
+
     password: z
       .string()
       .min(1, "Vui lòng nhập mật khẩu")
       .min(8, "Mật khẩu phải có ít nhất 8 ký tự")
       .max(64, "Mật khẩu tối đa 64 ký tự")
-
-      // Check chữ hoa
       .regex(/[A-Z]/, "Mật khẩu phải chứa ít nhất 1 chữ cái viết hoa")
-      
-      // Check chữ thường
       .regex(/[a-z]/, "Mật khẩu phải chứa ít nhất 1 chữ cái viết thường")
-      
-      // Check chữ số
       .regex(/[0-9]/, "Mật khẩu phải chứa ít nhất 1 chữ số")
-      
-      // Check ký tự đặc biệt
-      .regex(/[^A-Za-z0-9]/, "Mật khẩu phải chứa ít nhất 1 ký tự đặc biệt (!@#$%^&*)")
-      
-      // Check dấu cách
-      .refine((val) => !val.includes(" "), "Mật khẩu không được chứa khoảng trắng"),
-    confirmPassword: z.string().min(1, "Vui lòng xác nhận mật khẩu"),
+      .regex(
+        /[^A-Za-z0-9]/,
+        "Mật khẩu phải chứa ít nhất 1 ký tự đặc biệt (!@#$%^&*)"
+      )
+      .refine(
+        (val) => !val.includes(" "),
+        "Mật khẩu không được chứa khoảng trắng"
+      ),
+
+    confirmPassword: z
+      .string()
+      .min(1, "Vui lòng xác nhận mật khẩu"),
   })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Mật khẩu xác nhận không khớp",
-    path: ["confirmPassword"],
-  });
+  .refine(
+    (data) => data.password === data.confirmPassword,
+    {
+      message: "Mật khẩu xác nhận không khớp",
+      path: ["confirmPassword"],
+    }
+  );
 
 export type RegisterFormData = z.infer<typeof registerSchema>;
 
@@ -84,26 +118,28 @@ export const resetPasswordSchema = z
       .min(1, "Vui lòng nhập mật khẩu mới")
       .min(8, "Mật khẩu phải có ít nhất 8 ký tự")
       .max(64, "Mật khẩu tối đa 64 ký tự")
-      
-      // Check chữ hoa
       .regex(/[A-Z]/, "Mật khẩu phải chứa ít nhất 1 chữ cái viết hoa")
-
-      // Check chữ thường
       .regex(/[a-z]/, "Mật khẩu phải chứa ít nhất 1 chữ cái viết thường")
-
-      // Check chữ số
       .regex(/[0-9]/, "Mật khẩu phải chứa ít nhất 1 chữ số")
+      .regex(
+        /[^A-Za-z0-9]/,
+        "Mật khẩu phải chứa ít nhất 1 ký tự đặc biệt (!@#$%^&*)"
+      )
+      .refine(
+        (val) => !val.includes(" "),
+        "Mật khẩu không được chứa khoảng trắng"
+      ),
 
-      // Check ký tự đặc biệt
-      .regex(/[^A-Za-z0-9]/, "Mật khẩu phải chứa ít nhất 1 ký tự đặc biệt (!@#$%^&*)")
-
-      // Check dấu cách
-      .refine((val) => !val.includes(" "), "Mật khẩu không được chứa khoảng trắng"),
-    confirmPassword: z.string().min(1, "Vui lòng xác nhận mật khẩu mới"),
+    confirmPassword: z
+      .string()
+      .min(1, "Vui lòng xác nhận mật khẩu mới"),
   })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Mật khẩu xác nhận không khớp",
-    path: ["confirmPassword"],
-  });
+  .refine(
+    (data) => data.password === data.confirmPassword,
+    {
+      message: "Mật khẩu xác nhận không khớp",
+      path: ["confirmPassword"],
+    }
+  );
 
 export type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;

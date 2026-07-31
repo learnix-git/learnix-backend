@@ -258,6 +258,7 @@ model Skill {
 model Post {
   id      String   @id @default(cuid())
   owner   String
+  alias   String?  @unique
   title   String
   content String   @db.Text
   level   Level    @default(ALL)
@@ -315,6 +316,7 @@ model PostSubject {
 model Request {
   id       String   @id @default(cuid())
   learner  String
+  alias    String?  @unique
   title    String
   desc     String   @db.Text
   level    Level    @default(ALL)
