@@ -1,3 +1,7 @@
+// GET  /api/v1/notifications
+// PATCH /api/v1/notifications/:id/read
+// PATCH /api/v1/notifications/read-all
+
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import dotenv from 'dotenv';

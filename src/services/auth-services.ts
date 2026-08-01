@@ -3,11 +3,11 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { Gender } from "@prisma/client";
 
 import { hash, compare } from '../utils/bcrypt';
-import { generate } from '../utils/jwt';
+import { generate as generateToken } from '../utils/jwt';
 import { OAuth2Client } from 'google-auth-library';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
-import { generateAlias } from '../utils/alias';
+import { generate as generateAlias } from '../utils/alias';
 dotenv.config();
 
 import nodemailer from "nodemailer";
@@ -20,8 +20,8 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-const adapter = new PrismaPg({ 
-  connectionString: process.env.DATABASE_URL! 
+const adapter = new PrismaPg({
+  connectionString: process.env.DATABASE_URL!
 });
 
 const prisma = new PrismaClient({ adapter });
@@ -31,7 +31,7 @@ const google = new OAuth2Client(
   process.env.GOOGLE_CLIENT_SECRET
 );
 
-export class AuthService {  
+export class AuthService {
   // ! Logic ĐĂNG KÝ
   static async register(data: { email: string; password: string; name: string; role?: any; gender: number; dob?: string | undefined; phone?: string | undefined }) {
     // Kiểm tra email có bị trùng không
@@ -82,7 +82,7 @@ export class AuthService {
     });
 
     // Tạo token
-    const token = generate({ id: user.id, role: user.role });
+    const token = generateToken({ id: user.id, role: user.role });
 
     const { password, ...userWithoutPassword } = user;
     return { user: userWithoutPassword, token };
@@ -113,7 +113,7 @@ export class AuthService {
       data: { login: new Date() },
     });
 
-    const token = generate({ id: user.id, role: user.role });
+    const token = generateToken({ id: user.id, role: user.role });
     const { password, ...userWithoutPassword } = user;
     return { user: userWithoutPassword, token };
   }
@@ -129,7 +129,7 @@ export class AuthService {
       idToken: tokens.id_token!,
       audience: process.env.GOOGLE_CLIENT_ID!,
     });
-    
+
     const payload = ticket.getPayload();
     if (!payload || !payload.email) {
       throw new Error("Không thể lấy thông tin từ Google!");
@@ -165,16 +165,16 @@ export class AuthService {
       // Cập nhật giờ login nếu đã có tài khoản
       user = await prisma.user.update({
         where: { id: user.id },
-        data: { 
+        data: {
           login: new Date(),
-          provider: "google" 
+          provider: "google"
         },
       });
     }
 
-    const token = generate({ id: user.id, role: user.role });
+    const token = generateToken({ id: user.id, role: user.role });
     const { password, ...userWithoutPassword } = user;
-    
+
     return { user: userWithoutPassword, token };
   }
 
@@ -182,15 +182,15 @@ export class AuthService {
   static async get_info(userId: string) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { 
-        id: true, email: true, name: true, role: true, 
+      select: {
+        id: true, email: true, name: true, role: true,
         gender: true, avatar: true, active: true,
         dob: true, phone: true,
       },
     });
-    
-    if (!user) {  
-        throw new Error("User không tồn tại!");
+
+    if (!user) {
+      throw new Error("User không tồn tại!");
     }
     return user;
   }
@@ -198,7 +198,7 @@ export class AuthService {
   // ! Logic quên mật khẩu
   static async forgot_password(email: string): Promise<void> {
     const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) 
+    if (!user)
       throw new Error("Email này chưa được đăng ký trên hệ thống!");
 
     if (user.provider === "google") {
@@ -206,7 +206,7 @@ export class AuthService {
       (google as any).provider = "google";
       throw google;
     }
-    
+
     const reset_token = crypto.randomBytes(32).toString("hex");
     const reset_expire = new Date(Date.now() + 15 * 60 * 1000);
 
@@ -215,7 +215,8 @@ export class AuthService {
       data: { token: reset_token, expire: reset_expire },
     });
 
-    const url = `http://localhost:4000/reset-password?token=${reset_token}`;
+    const base = process.env.CLIENT_URL ?? "http://localhost:4000";
+    const url = `${base}/reset-password?token=${reset_token}`;
 
     const mail = {
       from: `"Learnix Support" <${process.env.EMAIL_USER}>`,
@@ -294,8 +295,8 @@ export class AuthService {
   static async reset_password(token: string, password: string): Promise<void> {
     const user = await prisma.user.findFirst({
       where: {
-        token: token, 
-        expire: { gt: new Date() }, 
+        token: token,
+        expire: { gt: new Date() },
       },
     });
 
@@ -303,14 +304,14 @@ export class AuthService {
       throw new Error("Link đặt lại mật khẩu không hợp lệ hoặc đã hết hạn!");
     }
 
-    const hashed = await hash(password); 
+    const hashed = await hash(password);
 
     await prisma.user.update({
-      where: { id: user.id }, 
+      where: { id: user.id },
       data: {
         password: hashed,
-        token: null,  
-        expire: null, 
+        token: null,
+        expire: null,
       },
     });
   }

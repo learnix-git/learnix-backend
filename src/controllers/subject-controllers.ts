@@ -3,6 +3,7 @@ import { SubjectService } from '../services/subject-services';
 import { GetSubjectsSchema } from '../validations/subject-validations';
 
 export class SubjectController {
+  // Hàm lấy danh sách môn học
   static async get_subjects(
     req: Request,
     res: Response

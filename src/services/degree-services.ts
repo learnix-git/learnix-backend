@@ -1,3 +1,7 @@
+// GET    /api/v1/degrees
+// POST   /api/v1/degrees
+// DELETE /api/v1/degrees/:id
+
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { v2 as cloudinary, type UploadApiResponse } from 'cloudinary';

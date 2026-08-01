@@ -1,4 +1,5 @@
 // GET    /api/v1/posts
+// GET    /api/v1/posts/my
 // GET    /api/v1/posts/:id
 // POST   /api/v1/posts
 // PATCH  /api/v1/posts/:id

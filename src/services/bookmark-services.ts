@@ -2,9 +2,9 @@
 // POST   /api/v1/bookmarks
 // DELETE /api/v1/bookmarks/:requestId
 
-import { PrismaClient } from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
-import dotenv from 'dotenv';
+import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+import dotenv from "dotenv";
 
 dotenv.config();
 
@@ -12,10 +12,12 @@ const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL!,
 });
 
-const prisma = new PrismaClient({ adapter });
+const prisma = new PrismaClient({
+  adapter,
+});
 
 export class BookmarkService {
-  // Hàm lấy danh sách cuộc trò chuyện đã lưu
+  // Hàm lấy danh sách đã lưu
   static async get_bookmarks(
     userId: string,
     page: number,
@@ -29,10 +31,12 @@ export class BookmarkService {
             user: userId,
           },
         }),
+
         prisma.savedPost.findMany({
           where: {
             user: userId,
           },
+
           include: {
             class: {
               include: {
@@ -46,11 +50,13 @@ export class BookmarkService {
                     },
                   },
                 },
+
                 tutor: {
                   select: {
                     id: true,
                     rating: true,
                     reviews: true,
+
                     account: {
                       select: {
                         name: true,
@@ -63,16 +69,22 @@ export class BookmarkService {
               },
             },
           },
+
           orderBy: {
             created: "desc",
           },
+
           skip: (page - 1) * limit,
           take: limit,
         }),
       ]);
 
       return {
-        items: rows.map(r => ({ ...r, post: r.class })), // alias class to post for frontend compatibility
+        items: rows.map((r) => ({
+          ...r,
+          post: r.class,
+        })),
+
         total,
         page,
         limit,
@@ -80,7 +92,7 @@ export class BookmarkService {
       };
     }
 
-    // Default to request
+    // Mặc định là request
     const [total, rows] = await Promise.all([
       prisma.savedRequest.count({
         where: {
@@ -92,6 +104,7 @@ export class BookmarkService {
         where: {
           user: userId,
         },
+
         include: {
           request: {
             include: {
@@ -105,6 +118,7 @@ export class BookmarkService {
                   },
                 },
               },
+
               student: {
                 select: {
                   account: {
@@ -119,9 +133,11 @@ export class BookmarkService {
             },
           },
         },
+
         orderBy: {
           created: "desc",
         },
+
         skip: (page - 1) * limit,
         take: limit,
       }),
@@ -137,20 +153,32 @@ export class BookmarkService {
   }
 
   // Hàm lưu bài đăng (gia sư)
-  static async create_post_bookmark(userId: string, postId: string) {
+  static async create_post_bookmark(
+    userId: string,
+    postId: string
+  ) {
     const post = await prisma.post.findUnique({
-      where: { id: postId },
+      where: {
+        id: postId,
+      },
     });
-    if (!post) throw new Error("Bài đăng không tồn tại!");
 
-    return await prisma.savedPost.upsert({
+    if (!post) {
+      throw new Error(
+        "Bài đăng không tồn tại!"
+      );
+    }
+
+    return prisma.savedPost.upsert({
       where: {
         user_post: {
           user: userId,
           post: postId,
         },
       },
+
       update: {},
+
       create: {
         user: userId,
         post: postId,
@@ -159,7 +187,10 @@ export class BookmarkService {
   }
 
   // Hàm bỏ lưu bài đăng (gia sư)
-  static async delete_post_bookmark(userId: string, postId: string) {
+  static async delete_post_bookmark(
+    userId: string,
+    postId: string
+  ) {
     try {
       await prisma.savedPost.delete({
         where: {
@@ -169,7 +200,7 @@ export class BookmarkService {
           },
         },
       });
-    } catch (e) {
+    } catch (error) {
       // Bỏ qua nếu không tồn tại
     }
   }
@@ -186,7 +217,9 @@ export class BookmarkService {
     });
 
     if (!request) {
-      throw new Error("Yêu cầu không tồn tại!");
+      throw new Error(
+        "Yêu cầu không tồn tại!"
+      );
     }
 
     const exist = await prisma.savedRequest.findUnique({
@@ -199,7 +232,9 @@ export class BookmarkService {
     });
 
     if (exist) {
-      throw new Error("Bạn đã lưu yêu cầu này rồi!");
+      throw new Error(
+        "Bạn đã lưu yêu cầu này rồi!"
+      );
     }
 
     const bookmark = await prisma.savedRequest.create({

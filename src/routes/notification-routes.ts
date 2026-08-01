@@ -4,6 +4,7 @@ import { compel } from '../middlewares/auth-middlewares';
 
 const router = Router();
 
+// POST
 router.post('/', compel, NotificationController.list);
 router.post('/read', compel, NotificationController.read);
 router.post('/read-all', compel, NotificationController.readAll);

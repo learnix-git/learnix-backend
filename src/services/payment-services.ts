@@ -1,3 +1,9 @@
+// GET   /api/v1/payments/my
+// POST  /api/v1/payments/contracts/:id/student-deposit
+// POST  /api/v1/payments/contracts/:id/tutor-deposit
+// POST  /api/v1/payments/contracts/:id/pay-final
+// PATCH /api/v1/payments/:id/confirm-payout
+
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import dotenv from "dotenv";
@@ -62,7 +68,6 @@ export class PaymentService {
   }
 
   // Hàm học sinh đặt cọc 30% học phí
-  // Gọi sau khi gia sư đã đồng ý (contract.status = OPEN)
   static async student_deposit(
     contractId: string,
     userId: string
@@ -281,7 +286,7 @@ export class PaymentService {
       },
     });
 
-    // Tạo lệnh chuyển tiền cho gia sư (payout)
+    // Tạo lệnh chuyển tiền cho gia sư
     const tutorAccount = await prisma.tutor.findUnique({
       where: {
         id: contract.tutor,
@@ -364,7 +369,7 @@ export class PaymentService {
       },
     });
 
-    // Kiểm tra cả 2 bên (học sinh + gia sư) đều đã có record DEPOSIT
+    // Kiểm tra cả 2 bên đều đã có record DEPOSIT
     const hasStudentDeposit = deposits.some(
       (d) => d.owner === contract.student.user
     );

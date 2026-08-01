@@ -6,7 +6,7 @@ import {
 } from '../validations/bookmark-validations';
 
 export class BookmarkController {
-  // Lấy danh sách bookmark (phân trang và theo type)
+  // Lấy danh sách bookmark
   static async get_bookmarks(
     req: Request,
     res: Response
@@ -37,7 +37,7 @@ export class BookmarkController {
     }
   }
 
-  // Tạo mới bookmark (Post hoặc Request)
+  // Tạo mới bookmark
   static async create_bookmark(
     req: Request,
     res: Response
@@ -70,7 +70,7 @@ export class BookmarkController {
     }
   }
 
-  // Bỏ lưu bookmark (Post hoặc Request)
+  // Bỏ lưu bookmark
   static async delete_bookmark(
     req: Request<{ id: string }, any, any, { type?: string }>,
     res: Response
@@ -85,7 +85,6 @@ export class BookmarkController {
       } else if (type === 'request') {
         await BookmarkService.delete_request_bookmark(userId, id);
       } else {
-        // Fallback: xoá ở cả 2 bảng nếu không truyền type
         await BookmarkService.delete_request_bookmark(userId, id);
         await BookmarkService.delete_post_bookmark(userId, id);
       }

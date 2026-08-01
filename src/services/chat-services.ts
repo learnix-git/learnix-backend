@@ -1,3 +1,11 @@
+// POST /api/v1/chats
+// GET  /api/v1/chats
+// POST /api/v1/chats/messages
+// POST /api/v1/chats/send
+// POST /api/v1/chats/read
+// POST /api/v1/chats/upload
+// GET  /api/v1/chats/unread
+
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { NotificationService } from './notification-services';
@@ -138,10 +146,10 @@ export class ChatService {
             },
             ...(readAt
               ? {
-                  created: {
-                    gt: readAt,
-                  },
-                }
+                created: {
+                  gt: readAt,
+                },
+              }
               : {}),
           },
         });
@@ -363,7 +371,7 @@ export class ChatService {
     });
 
     const results = await Promise.all(
-      chats.map(async (chat : any) => {
+      chats.map(async (chat: any) => {
         // Xác định thời điểm đọc
         const readAt = chat.first === userId ? chat.read1 : chat.read2;
 
@@ -377,10 +385,10 @@ export class ChatService {
               },
               ...(readAt
                 ? {
-                    created: {
-                      gt: readAt,
-                    },
-                  }
+                  created: {
+                    gt: readAt,
+                  },
+                }
                 : {}),
             },
           }),
