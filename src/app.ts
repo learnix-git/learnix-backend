@@ -20,7 +20,7 @@ dotenv.config();
 const app = express();
 
 // Chống tấn công Brute Force
-const rate_limiting= rateLimit({
+const rate_limiting = rateLimit({
   windowMs: 5 * 60 * 1000,
   max: 100,
   message: { status: "ERROR", message: "Nhập mật khẩu sai quá nhiều, vui lòng thử lại sau 5 phút!" },
@@ -29,7 +29,7 @@ const rate_limiting= rateLimit({
 });
 
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:4000',
+  origin: process.env.CLIENT_URL?.split(', ') || 'http://localhost:4000',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   credentials: true
 }));
