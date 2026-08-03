@@ -5,9 +5,10 @@ import { compel } from '../middlewares/auth-middlewares';
 const router = Router();
 
 // GET
-router.get('/my',       compel, ContractController.get_my_contracts_student);
-router.get('/tutor',    compel, ContractController.get_my_contracts_tutor);
-router.get('/:id',      compel, ContractController.get_contract);
+router.get('/my',          compel, ContractController.get_my_contracts_student);
+router.get('/tutor',       compel, ContractController.get_my_contracts_tutor);
+router.get('/code/:code',  compel, ContractController.get_contract_by_code);
+router.get('/:id',         compel, ContractController.get_contract);
 
 // POST
 router.post('/', compel, ContractController.create_contract);

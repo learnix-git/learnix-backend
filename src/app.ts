@@ -14,6 +14,8 @@ import RequestRoute from './routes/request-routes';
 import FollowRoute from './routes/follow-routes';
 import BookmarkRoute from './routes/bookmark-routes';
 import SubjectRoute from './routes/subject-routes';
+import ContractRoute from './routes/contract-routes';
+import PaymentRoute from './routes/payment-routes';
 
 dotenv.config();
 
@@ -51,6 +53,8 @@ app.use('/api/v1/requests', RequestRoute);
 app.use('/api/v1/follows', FollowRoute);
 app.use('/api/v1/bookmarks', BookmarkRoute);
 app.use('/api/v1/subjects', SubjectRoute);
+app.use('/api/v1/contracts', ContractRoute);
+app.use('/api/v1/payments', PaymentRoute);
 
 app.get('/api/v1/health', (req: Request, res: Response) => {
   res.status(200).json({ status: 'SUCCESS', message: 'Backend đang chạy ... !' });

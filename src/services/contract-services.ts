@@ -289,7 +289,61 @@ export class ContractService {
     return contract;
   }
 
-  // Hàm tạo hợp đồng mới, trạng thái ban đầu PENDING
+  // Hàm lấy chi tiết hợp đồng theo CODE
+  static async get_contract_by_code(
+    code: string,
+    userId: string
+  ) {
+    const contract = await prisma.contract.findUnique({
+      where: { code },
+      include: {
+        student: {
+          select: {
+            id: true,
+            user: true,
+            account: {
+              select: { id: true, name: true, alias: true, avatar: true },
+            },
+          },
+        },
+        teacher: {
+          select: {
+            id: true,
+            user: true,
+            rating: true,
+            major: true,
+            account: {
+              select: { id: true, name: true, alias: true, avatar: true },
+            },
+          },
+        },
+        request: { select: { id: true, alias: true, title: true } },
+        class: { select: { id: true, alias: true, title: true } },
+        bills: { orderBy: { created: "desc" } },
+        items: { orderBy: { start: "asc" } },
+        reviews: true,
+      },
+    });
+
+    if (!contract) {
+      throw new Error("Hợp đồng không tồn tại!");
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new Error("Người dùng không tồn tại!");
+
+    const isStudent = contract.student.user === userId;
+    const isTutor = contract.teacher.user === userId;
+    const isAdmin = user.role === "ADMIN";
+
+    if (!isStudent && !isTutor && !isAdmin) {
+      throw new Error("Bạn không có quyền xem hợp đồng này!");
+    }
+
+    return contract;
+  }
+
+
   static async create_contract(
     userId: string,
     data: {

@@ -47,6 +47,8 @@ export class UserService {
       level?: string;
       major?: string;
       school?: string;
+      exp?: string;
+      rate?: string;
     }
   ) {
     const payload: Record<string, any> = {};
@@ -164,6 +166,14 @@ export class UserService {
 
       if (data.school !== undefined) {
         payload.school = data.school;
+      }
+
+      if (data.exp !== undefined) {
+        payload.exp = parseInt(data.exp, 10);
+      }
+
+      if (data.rate !== undefined) {
+        payload.rate = parseFloat(data.rate);
       }
 
       if (Object.keys(payload).length > 0) {

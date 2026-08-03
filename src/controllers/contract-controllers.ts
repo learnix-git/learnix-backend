@@ -48,30 +48,29 @@ export class ContractController {
     }
   }
 
-  // Hàm lấy chi tiết 1 hợp đồng
-  static async get_contract(
-    req: Request<{ id: string }>,
-    res: Response
-  ) {
+  // GET /api/v1/contracts/:id
+  static async get_contract(req: Request<{ id: string }>, res: Response) {
     try {
-      // Lấy user đang đăng nhập
       const userId = res.locals.user.id;
       const contractId = req.params.id;
-
       const data = await ContractService.get_contract(contractId, userId);
-
-      res.status(200).json({
-        code: 200,
-        data,
-      });
+      res.status(200).json({ code: 200, data });
     } catch (error: any) {
-      // Trả 403 nếu lỗi liên quan tới quyền xem
-      const status = error.message?.includes("quyền") ? 403 : 400;
+      const status = error.message?.includes('quyền') ? 403 : 400;
+      res.status(status).json({ code: status, message: error.message || 'Không thể lấy hợp đồng!' });
+    }
+  }
 
-      res.status(status).json({
-        code: status,
-        message: error.message || "Không thể lấy hợp đồng!",
-      });
+  // GET /api/v1/contracts/code/:code  —  tra theo mã code (dùng cho URL /order/[code])
+  static async get_contract_by_code(req: Request<{ code: string }>, res: Response) {
+    try {
+      const userId = res.locals.user.id;
+      const { code } = req.params;
+      const data = await ContractService.get_contract_by_code(code, userId);
+      res.status(200).json({ code: 200, data });
+    } catch (error: any) {
+      const status = error.message?.includes('quyền') ? 403 : 400;
+      res.status(status).json({ code: status, message: error.message || 'Không thể lấy hợp đồng!' });
     }
   }
 

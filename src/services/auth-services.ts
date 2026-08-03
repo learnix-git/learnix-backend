@@ -186,6 +186,7 @@ export class AuthService {
         id: true, email: true, name: true, role: true,
         gender: true, avatar: true, active: true,
         dob: true, phone: true,
+        tutor: true, student: true
       },
     });
 
